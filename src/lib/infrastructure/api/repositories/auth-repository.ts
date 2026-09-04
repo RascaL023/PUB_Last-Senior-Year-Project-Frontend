@@ -1,0 +1,41 @@
+import { API_AUTH } from '$lib/config/env';
+import type { TokenStore } from '$lib/core/auth/token-store';
+import type { HttpClient } from '$lib/core/http/http-client';
+import type { LoginRequest, LoginResponse, RefreshResponse } from '$lib/domain/auth';
+import type { AuthRepository } from '$lib/domain/ports/auth-repository';
+
+export function createAuthRepository(http: HttpClient, tokens: TokenStore): AuthRepository {
+	return {
+		async login(payload: LoginRequest): Promise<LoginResponse> {
+			const data = await http.post<LoginResponse>(`${API_AUTH}/login`, payload, {
+				auth: false
+			});
+			if (!data) throw new Error('Empty login response');
+			tokens.setAccessToken(data.accessToken);
+			return data;
+		},
+		async refresh(): Promise<string> {
+			const data = await http.post<RefreshResponse>(`${API_AUTH}/refresh`, undefined, {
+				auth: false
+			});
+			const token = data?.accessToken;
+			if (!token) throw new Error('Refresh token is missing');
+			tokens.setAccessToken(token);
+			return token;
+		},
+		async logout(): Promise<void> {
+			try {
+				await http.postWithoutResponse(`${API_AUTH}/logout`, undefined, { auth: false });
+			} finally {
+				tokens.clear();
+			}
+		},
+		async logoutAll(): Promise<void> {
+			try {
+				await http.postWithoutResponse(`${API_AUTH}/logout-all`);
+			} finally {
+				tokens.clear();
+			}
+		}
+	};
+}

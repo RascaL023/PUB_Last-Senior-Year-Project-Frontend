@@ -1,6 +1,7 @@
 # Mine
 .myenv
 private
+**.bak
 
 node_modules
 
