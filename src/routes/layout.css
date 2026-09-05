@@ -1,1 +1,56 @@
 @import 'tailwindcss';
+@import '../lib/styles/themes.css';
+
+@theme inline {
+	--color-app: var(--theme-bg-app);
+	--color-shell: var(--theme-bg-shell);
+	--color-card: var(--theme-bg-card);
+	--color-card-hover: var(--theme-bg-card-hover);
+	--color-subtle: var(--theme-bg-subtle);
+	--color-overlay: var(--theme-bg-overlay);
+	--color-ink: var(--theme-text-main);
+	--color-muted: var(--theme-text-muted);
+	--color-faint: var(--theme-text-subtle);
+	--color-inverted: var(--theme-text-inverted);
+	--color-accent: var(--theme-accent-primary);
+	--color-accent2: var(--theme-accent-secondary);
+	--color-caramel: var(--theme-color-caramel);
+	--color-latte: var(--theme-color-latte);
+	--color-leaf: var(--theme-color-green);
+	--color-blossom: var(--theme-color-pink);
+	--color-ember: var(--theme-color-orange);
+	--color-honey: var(--theme-color-yellow);
+	--color-grape: var(--theme-color-purple);
+	--color-sky: var(--theme-color-blue);
+	--color-danger: var(--theme-color-red);
+	--color-aqua: var(--theme-color-cyan);
+	--color-line: var(--theme-border-color);
+	--color-linemuted: var(--theme-border-muted);
+	--radius-shell: var(--theme-radius-shell);
+	--radius-card: var(--theme-radius-card);
+	--radius-btn: var(--theme-radius-btn);
+	--radius-pill: var(--theme-radius-pill);
+	--shadow-rice: var(--theme-shadow);
+	--shadow-ricesm: var(--theme-shadow-sm);
+	--shadow-ricelg: var(--theme-shadow-lg);
+	--font-theme: var(--theme-font);
+}
+
+@utility border-rice {
+	border-width: var(--theme-border-w);
+}
+
+@utility backdrop-blur-rice {
+	backdrop-filter: blur(var(--theme-blur)) saturate(160%);
+	-webkit-backdrop-filter: blur(var(--theme-blur)) saturate(160%);
+}
+
+html {
+	font-family: var(--theme-font);
+}
+
+body {
+	background: var(--theme-bg-app);
+	color: var(--theme-text-main);
+	min-height: 100vh;
+}
