@@ -14,9 +14,9 @@
 		<div class="mb-2 flex items-start justify-between gap-2">
 			<h3 class="text-ink text-base leading-tight font-bold">{menu.name}</h3>
 			{#if menu.isAvailable}
-				<span class="bg-leaf text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 text-xs font-bold whitespace-nowrap">Tersedia</span>
+				<span class="bg-leaf text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 font-mono text-xs font-bold whitespace-nowrap">Tersedia</span>
 			{:else}
-				<span class="bg-danger text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 text-xs font-bold whitespace-nowrap">Habis</span>
+				<span class="bg-danger text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 font-mono text-xs font-bold whitespace-nowrap">Habis</span>
 			{/if}
 		</div>
 
@@ -25,7 +25,7 @@
 		{/if}
 
 		<div class="flex items-center justify-between gap-2">
-			<span class="text-ink text-lg font-extrabold">Rp {menu.basePrice.toLocaleString('id-ID')}</span>
+			<span class="text-ink font-mono text-lg font-extrabold">Rp {menu.basePrice.toLocaleString('id-ID')}</span>
 			{#if menu.categories.length > 0}
 				<span class="bg-subtle text-muted rounded-btn border-rice border-line truncate px-2 py-0.5 text-xs">
 					{menu.categories.map((c) => c.name).join(', ')}

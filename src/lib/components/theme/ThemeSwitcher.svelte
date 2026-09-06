@@ -52,7 +52,7 @@
 			aria-label="Pilih tema, saat ini {themeStore.current}"
 			aria-controls={panelId}
 			aria-expanded={activePanel === 'theme'}
-			class="theme-trigger border-line text-muted hover:text-ink rounded-pill border-rice rice-press shadow-ricesm px-3 py-2 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-primary)]"
+			class="theme-trigger border-line text-muted hover:text-ink rounded-pill border-rice rice-press rice-ghost shadow-ricesm px-3 py-2 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-primary)]"
 			class:is-open={activePanel === 'theme'}
 		>
 			◐ {short[themeStore.current]}
@@ -203,10 +203,15 @@
 	}
 
 	:global([data-theme='glass-cafe']) .theme-panel {
-		background: var(--theme-bg-overlay);
-		border-color: rgba(255, 255, 255, 0.2);
-		box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.9);
-		backdrop-filter: blur(var(--theme-blur));
+		background:
+			linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04) 32%),
+			var(--theme-bg-overlay);
+		border-color: rgba(255, 255, 255, 0.22);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.14),
+			0 24px 60px -24px rgba(0, 0, 0, 0.9);
+		backdrop-filter: blur(var(--theme-blur)) saturate(180%);
+		-webkit-backdrop-filter: blur(var(--theme-blur)) saturate(180%);
 	}
 
 	:global([data-theme='glass-cafe']) .theme-panel::before {
@@ -214,12 +219,16 @@
 	}
 
 	:global([data-theme='glass-cafe']) .theme-option:not(.is-current) {
-		background: rgba(255, 255, 255, 0.08);
+		background: rgba(255, 255, 255, 0.1);
+		border-color: rgba(255, 255, 255, 0.1);
 		color: var(--theme-text-main);
+		backdrop-filter: blur(calc(var(--theme-blur) / 2));
+		-webkit-backdrop-filter: blur(calc(var(--theme-blur) / 2));
 	}
 
 	:global([data-theme='glass-cafe']) .theme-option:not(.is-current):hover {
-		background: rgba(255, 255, 255, 0.14);
+		background: rgba(255, 255, 255, 0.18);
+		border-color: rgba(255, 255, 255, 0.22);
 	}
 
 	@media (prefers-reduced-motion: reduce) {

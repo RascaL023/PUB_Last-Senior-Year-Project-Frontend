@@ -13,7 +13,9 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
 ### 1.1 Layout, Structure & Physics Tokens (nama class aktual)
 | Class Tailwind | Variabel CSS | Deskripsi Penggunaan |
 |---|---|---|
-| `font-theme` | `--theme-font` | Font utama seluruh halaman |
+| `font-theme` | `--theme-font` | Font utama (body) seluruh halaman |
+| `font-display` | `--theme-font-display` | Font judul/hero — `h1`, `h2`, brand header |
+| `font-mono` | `--theme-font-mono` | Font angka/badge — harga, status, label kecil (override theme-aware atas `font-mono` bawaan Tailwind) |
 | `bg-app` | `--theme-bg-app` | Background dasar / canvas aplikasi |
 | `bg-shell` | `--theme-bg-shell` | Outer layout shell / wrapper utama |
 | `bg-card` | `--theme-bg-card` | Container / permukaan utama kartu |
@@ -60,12 +62,15 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
 *Inspirasi: Palet Resmi Kanagawa Dragon (Dark, Earthy, Traditional Japanese Roastery)*
 
 * **Vibe:** Gelap, hangat, earthy, dengan nuansa kayu bakar dan daun teh tradisional khas Jepang.
-* **Typography:** `'Plus Jakarta Sans'`, sans-serif
+* **Typography (dominan Maple Mono):** body + mono `Maple Mono NF` (self-host `static/fonts/maple-mono/`),
+  display `Shippori Mincho B1` (Google Fonts, serif tradisional)
 
 #### Full CSS Tokens Spec:
 ```css
 [data-theme="kanagawa"] {
-  --theme-font: 'Plus Jakarta Sans', sans-serif;
+  --theme-font: 'Maple Mono NF', ui-monospace, monospace;
+  --theme-font-display: 'Shippori Mincho B1', 'Maple Mono NF', serif;
+  --theme-font-mono: 'Maple Mono NF', ui-monospace, monospace;
   
   /* Canvas & Containers (Kanagawa Dragon Blacks) */
   --theme-bg-app: #121212;             /* dragonBlack1 */
@@ -118,12 +123,14 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
 *Inspirasi: Floating Frosted Glass UI & Niri Rice (Clean, Lightweight & Elegant)*
 
 * **Vibe:** Transparan, melayang di atas canvas warm espresso, mewah, bersih, dan modern.
-* **Typography:** `'Geist'`, `'Inter'`, sans-serif
+* **Typography:** body tetap `Geist`/`Inter`; display `Fraunces` (serif hangat, untuk hero/header)
 
 #### Full CSS Tokens Spec:
 ```css
 [data-theme="glass-cafe"] {
   --theme-font: 'Geist', 'Inter', sans-serif;
+  --theme-font-display: 'Fraunces', 'Geist', serif;
+  --theme-font-mono: 'Geist', 'Inter', sans-serif;
   
   /* Canvas & Containers (Warm Dark Espresso Canvas) */
   --theme-bg-app: linear-gradient(140deg, #140f0d, #1c1512 50%, #0f0b0a);
@@ -163,9 +170,9 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
   --theme-radius-card: 20px;
   --theme-radius-btn: 12px;
   --theme-radius-pill: 999px;
-  --theme-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.5);
-  --theme-shadow-sm: 0 8px 24px 0 rgba(0, 0, 0, 0.35);
-  --theme-shadow-lg: 0 30px 70px 0 rgba(0, 0, 0, 0.65);
+  --theme-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+  --theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --theme-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 48px -16px rgba(0, 0, 0, 0.55);
   --theme-blur: 20px;
 }
 ```
@@ -176,12 +183,14 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
 *Inspirasi: Exact 1:1 Reference dari `mockup.test/index.html` (Branch `feature/mock-up`)*
 
 * **Vibe:** Playful retro terminal rice, 2px ink outlines, flat offset hard shadows, dan palet warna cafe pastel.
-* **Typography:** `'JetBrains Mono'`, ui-monospace, monospace
+* **Typography:** body + mono `JetBrains Mono`; display `Archivo Black` (grotesque berat poster brutalist)
 
 #### Full CSS Tokens Spec:
 ```css
 [data-theme="neurobrutalism"] {
   --theme-font: 'JetBrains Mono', ui-monospace, monospace;
+  --theme-font-display: 'Archivo Black', 'JetBrains Mono', sans-serif;
+  --theme-font-mono: 'JetBrains Mono', ui-monospace, monospace;
   
   /* Canvas & Containers (Exact from mockup.test/index.html) */
   --theme-bg-app: linear-gradient(140deg, #f3e7d3, #ecd7ba 40%, #f7ead6 70%, #e9d2b4);
@@ -245,13 +254,15 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
 ### 2.4 Dribbble Pop (`data-theme="dribbble"`)
 *Inspirasi: Dribbble shot — kartu putih bersih di atas kanvas krem, CTA pink khas Dribbble, sudut membulat airy*
 
-* **Vibe:** Terang, clean-sharp ala Dribbble shot — kartu putih tegas nyaris tanpa radius, tombol kapsul, border nyaris tak terlihat, shadow hairline.
-* **Typography:** `'Plus Jakarta Sans'`, sans-serif (elegan geometris)
+* **Vibe:** Terang, clean-sharp monokrom modern ala Dribbble shot — kartu putih tegas nyaris tanpa radius, tombol kapsul hitam, border nyaris tak terlihat, shadow hairline.
+* **Typography:** body `Inter`; display + mono `Inter Tight` (700/800, tracking rapat — elegan minimalist)
 
 #### Full CSS Tokens Spec:
 ```css
 [data-theme="dribbble"] {
-  --theme-font: 'Plus Jakarta Sans', sans-serif;
+  --theme-font: 'Inter', sans-serif;
+  --theme-font-display: 'Inter Tight', 'Inter', sans-serif;
+  --theme-font-mono: 'Inter Tight', 'Inter', sans-serif;
 
   /* Canvas & Containers (putih clean) */
   --theme-bg-app: #faf9f7;
@@ -267,8 +278,8 @@ Dilarang memakai nilai hardcoded (`#...`, `rounded-xl`, `shadow-lg`, `font-mono`
   --theme-text-subtle: #9e9ea7;         /* Lighter gray */
   --theme-text-inverted: #ffffff;       /* On-accent */
 
-  /* Primary Accents */
-  --theme-accent-primary: #ea4c89;      /* Dribbble pink CTA */
+  /* Primary Accents (monokrom modern; pink hanya di --theme-color-pink untuk badge) */
+  --theme-accent-primary: #18181b;      /* Modern near-black CTA */
   --theme-accent-secondary: #0d0c22;    /* Ink black */
 
   /* Extended Semantic Colors */
@@ -310,7 +321,7 @@ Base transition `transform + box-shadow 0.16s ease`, dinonaktifkan saat `prefers
 | `kanagawa` | `translateY(-1px)`, shadow deepen, border kilau wave-blue | `translateY(0)`, shadow susut | Tenang, kalem |
 | `glass-cafe` | `translateY(-2px) scale(1.01)` + sheen sweep `::after` 0.6s | `scale(0.98)` | Floating glossy |
 | `neurobrutalism` | `translate(-1px,-1px)`, shadow `3.5px` | `translate(2px,2px)`, shadow hilang | Tactile press (mockup) |
-| `dribbble` | `translateY(-1px) scale(1.03)`, glow pink lembut, spring `cubic-bezier(0.34,1.4,0.64,1)` | `scale(0.96)` | Capsule pop |
+| `dribbble` | tukar BG↔FG 0.3s `ease`: solid→outline transparan, subtle/ghost→solid hitam, nav-link→fill hitam | `brightness(.92)` | Invert swap |
 
 ### 2.6 Animasi saat ganti tema (View Transitions API)
 
@@ -335,6 +346,18 @@ tampil benar di keempat tema tanpa branch `if theme`.
 
 Dilarang menumpuk `bg-card` di atas `bg-card` tanpa pembeda (pakai `bg-subtle` atau divider `border-linemuted`).
 
+### 3.1a Section shell & pengecualian seamless (dribbble)
+- Section landing memakai class semantik `landing-shell` di atas pola box §3.1
+  (`landing-shell border-line bg-shell rounded-shell shadow-ricelg border-rice ...`).
+- Khusus `dribbble`, box dilepas via override theme (bukan branch markup):
+  `background: transparent; border-color: transparent; box-shadow: none; border-radius: 0;`
+  Border dibuat transparan (bukan dihapus) agar tidak ada layout-shift saat ganti tema.
+- Ritme pengganti box di dribbble: hairline divider
+  `.landing-shell + .landing-shell { border-top: 1px solid var(--theme-border-muted); }`
+  + eyebrow editorial (`font-mono text-accent`, uppercase, tracking lebar) di atas `h2`.
+- CTA accent-banner (`bg-accent`) di semua tema tetap boxed — banner-contained adalah pola baku
+  Dribbble shot; full-bleed hanya untuk header & footer.
+
 ### 3.2 Pola baku tiap jenis komponen
 - **Button primer:** `bg-accent text-inverted rounded-btn border-rice border-line rice-press`.
 - **Button sekunder/ghost:** `bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press`.
@@ -345,6 +368,8 @@ Dilarang menumpuk `bg-card` di atas `bg-card` tanpa pembeda (pakai `bg-subtle` a
 - **Modal/overlay:** backdrop `bg-overlay`, panel `bg-card rounded-card shadow-ricelg border-rice border-line`.
 - **Fokus keyboard:** setiap elemen interaktif harus terlihat saat `:focus-visible`
   (outline memakai `accent`, offset 2px).
+- **Font:** judul/hero/brand memakai `font-display`; harga, badge status, dan label angka memakai
+  `font-mono`; body mengikuti `font-theme` otomatis. Dilarang `font-sans`/`font-serif`/font generik lain.
 
 ### 3.3 Pemetaan status domain → token warna (konsisten di semua modul)
 | Status | Token |

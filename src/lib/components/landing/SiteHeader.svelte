@@ -7,14 +7,14 @@
 		<a href="#top" class="flex min-w-0 items-center gap-3">
 			<span class="bg-accent text-inverted rounded-btn flex h-9 w-9 flex-none items-center justify-center text-base font-extrabold">☕</span>
 			<span class="min-w-0">
-				<span class="text-ink block truncate text-base leading-tight font-extrabold tracking-tight">Kopi Rustik</span>
+				<span class="text-ink font-display block truncate text-base leading-tight font-extrabold tracking-tight">Kopi Rustik</span>
 				<span class="text-muted block text-[11px] leading-tight">Café · sejak 2019</span>
 			</span>
 		</a>
 		<div class="hidden items-center gap-1 md:flex">
-			<a href="#menu" class="text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Menu</a>
-			<a href="#about" class="text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Tentang</a>
-			<a href="#kontak" class="text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Kontak</a>
+			<a href="#menu" class="nav-link text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Menu</a>
+			<a href="#about" class="nav-link text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Tentang</a>
+			<a href="#kontak" class="nav-link text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Kontak</a>
 		</div>
 		<div class="flex flex-none items-center gap-2">
 			<a

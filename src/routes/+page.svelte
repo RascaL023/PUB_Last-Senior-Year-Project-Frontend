@@ -8,10 +8,10 @@
 </script>
 
 <SiteHeader />
-<main id="top" class="font-theme bg-app text-ink min-h-screen px-3 pb-2 sm:px-6">
+<main id="top" class="font-theme bg-app text-ink min-h-screen px-3 pb-6 sm:px-6">
 	<HeroSection />
 	<MenuShowcase />
 	<AboutSection />
 	<CTASection />
-	<FooterSection />
 </main>
+<FooterSection />

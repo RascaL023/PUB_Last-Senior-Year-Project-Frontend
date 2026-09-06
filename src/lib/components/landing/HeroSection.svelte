@@ -4,7 +4,7 @@
 	import { motionDuration } from '$lib/actions/reveal';
 </script>
 
-<section class="border-line bg-shell rounded-shell shadow-ricelg border-rice mx-auto mt-6 max-w-7xl px-6 py-16 lg:py-20">
+<section class="landing-shell border-line bg-shell rounded-shell shadow-ricelg border-rice mx-auto mt-6 max-w-7xl px-6 py-16 lg:py-20">
 	<div class="grid items-center gap-10 lg:grid-cols-2">
 		<div>
 			<div in:fly={{ y: 20, duration: motionDuration(450) }}>
@@ -14,7 +14,7 @@
 			</div>
 			<h1
 				in:fly={{ y: 28, duration: motionDuration(500), delay: motionDuration(90) }}
-				class="text-ink mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl"
+				class="text-ink font-display mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl"
 			>
 				Kopi Rustik
 			</h1>
@@ -37,7 +37,7 @@
 				</a>
 				<a
 					href="#about"
-					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-6 py-3 text-center text-sm font-bold"
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press rice-ghost px-6 py-3 text-center text-sm font-bold"
 				>
 					Pelajari Lebih Lanjut
 				</a>
@@ -58,7 +58,7 @@
 						<p class="text-ink text-sm font-bold">Signature Rustik</p>
 						<p class="text-muted text-xs">Arabika Gayo · medium roast</p>
 					</div>
-					<span class="bg-leaf text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 text-xs font-bold whitespace-nowrap">Favorit</span>
+					<span class="bg-leaf text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 font-mono text-xs font-bold whitespace-nowrap">Favorit</span>
 				</div>
 			</div>
 		</div>

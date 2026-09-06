@@ -9,9 +9,10 @@
 	];
 </script>
 
-<section id="about" class="border-line bg-shell rounded-shell shadow-ricelg border-rice mx-auto mt-6 max-w-7xl scroll-mt-24 px-6 py-16">
+<section id="about" class="landing-shell border-line bg-shell rounded-shell shadow-ricelg border-rice mx-auto mt-6 max-w-7xl scroll-mt-24 px-6 py-16">
 	<div use:reveal class="mb-12 text-center">
-		<h2 class="text-ink mb-2 text-2xl font-extrabold">Kenapa Memilih Kami</h2>
+		<p class="text-accent mb-2 font-mono text-xs font-bold tracking-[0.2em] uppercase">— Keunggulan</p>
+		<h2 class="text-ink font-display mb-2 text-2xl font-extrabold">Kenapa Memilih Kami</h2>
 		<p class="text-muted text-sm">Komitmen kami untuk menyajikan pengalaman kopi terbaik</p>
 	</div>
 

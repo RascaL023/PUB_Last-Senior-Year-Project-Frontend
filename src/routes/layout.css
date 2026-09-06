@@ -35,6 +35,8 @@
 	--shadow-ricesm: var(--theme-shadow-sm);
 	--shadow-ricelg: var(--theme-shadow-lg);
 	--font-theme: var(--theme-font);
+	--font-display: var(--theme-font-display);
+	--font-mono: var(--theme-font-mono);
 }
 
 @utility border-rice {

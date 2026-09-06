@@ -1,6 +1,40 @@
+@font-face {
+	font-family: 'Maple Mono NF';
+	src: url('/fonts/maple-mono/MapleMono-NF-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Maple Mono NF';
+	src: url('/fonts/maple-mono/MapleMono-NF-Italic.woff2') format('woff2');
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Maple Mono NF';
+	src: url('/fonts/maple-mono/MapleMono-NF-Bold.woff2') format('woff2');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Maple Mono NF';
+	src: url('/fonts/maple-mono/MapleMono-NF-BoldItalic.woff2') format('woff2');
+	font-weight: 700;
+	font-style: italic;
+	font-display: swap;
+}
+
 :root,
 [data-theme='kanagawa'] {
-	--theme-font: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+	--theme-font: 'Maple Mono NF', ui-monospace, monospace;
+	--theme-font-display: 'Shippori Mincho B1', 'Maple Mono NF', serif;
+	--theme-font-mono: 'Maple Mono NF', ui-monospace, monospace;
 	--theme-bg-app: #121212;
 	--theme-bg-shell: #181616;
 	--theme-bg-card: #1d1c1d;
@@ -38,6 +72,8 @@
 
 [data-theme='glass-cafe'] {
 	--theme-font: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--theme-font-display: 'Fraunces', 'Geist', serif;
+	--theme-font-mono: 'Geist', 'Inter', ui-sans-serif, system-ui, sans-serif;
 	--theme-bg-app: linear-gradient(140deg, #140f0d, #1c1512 50%, #0f0b0a);
 	--theme-bg-shell: rgba(255, 255, 255, 0.04);
 	--theme-bg-card: rgba(255, 255, 255, 0.07);
@@ -67,14 +103,16 @@
 	--theme-radius-card: 20px;
 	--theme-radius-btn: 12px;
 	--theme-radius-pill: 999px;
-	--theme-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.5);
-	--theme-shadow-sm: 0 8px 24px 0 rgba(0, 0, 0, 0.35);
-	--theme-shadow-lg: 0 30px 70px 0 rgba(0, 0, 0, 0.65);
+	--theme-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+	--theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+	--theme-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 48px -16px rgba(0, 0, 0, 0.55);
 	--theme-blur: 20px;
 }
 
 [data-theme='neurobrutalism'] {
 	--theme-font: 'JetBrains Mono', ui-monospace, monospace;
+	--theme-font-display: 'Archivo Black', 'JetBrains Mono', sans-serif;
+	--theme-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 	--theme-bg-app: linear-gradient(140deg, #f3e7d3, #ecd7ba 40%, #f7ead6 70%, #e9d2b4);
 	--theme-bg-shell: #f6eddd;
 	--theme-bg-card: #fbf5ea;
@@ -111,7 +149,9 @@
 }
 
 [data-theme='dribbble'] {
-	--theme-font: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+	--theme-font: 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--theme-font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--theme-font-mono: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
 	--theme-bg-app: #faf9f7;
 	--theme-bg-shell: #ffffff;
 	--theme-bg-card: #ffffff;
@@ -122,7 +162,7 @@
 	--theme-text-muted: #6e6d7a;
 	--theme-text-subtle: #9e9ea7;
 	--theme-text-inverted: #ffffff;
-	--theme-accent-primary: #ea4c89;
+	--theme-accent-primary: #18181b;
 	--theme-accent-secondary: #0d0c22;
 	--theme-color-caramel: #c68d5a;
 	--theme-color-latte: #f3d5b8;
@@ -228,17 +268,63 @@
 
 /* Dribbble: springy capsule pop */
 [data-theme='dribbble'] .rice-press {
-	transition-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1);
+	transition:
+		background-color 0.3s ease,
+		color 0.3s ease,
+		border-color 0.3s ease,
+		transform 0.2s ease,
+		box-shadow 0.2s ease;
 }
 
-[data-theme='dribbble'] .rice-press:hover {
-	transform: translateY(-1px) scale(1.03);
-	box-shadow: 0 6px 16px -6px rgba(234, 76, 137, 0.45);
+[data-theme='dribbble'] .bg-accent.rice-press:hover {
+	background-color: transparent;
+	color: var(--theme-accent-primary);
+	border-color: var(--theme-accent-primary);
+	transform: translateY(-1px);
+	box-shadow: none;
+}
+
+[data-theme='dribbble'] .bg-subtle.rice-press:not(.rice-ghost):hover {
+	background-color: var(--theme-accent-primary);
+	color: var(--theme-text-inverted);
+	border-color: var(--theme-accent-primary);
+	transform: translateY(-1px);
+	box-shadow: 0 1px 2px rgba(13, 12, 34, 0.12);
+}
+
+[data-theme='dribbble'] .rice-ghost {
+	position: relative;
+}
+
+[data-theme='dribbble'] .rice-ghost:hover {
+	color: var(--theme-text-main);
+}
+
+[data-theme='dribbble'] .rice-ghost::after {
+	content: '';
+	position: absolute;
+	left: 12px;
+	right: 12px;
+	bottom: 6px;
+	height: 2px;
+	background: var(--theme-accent-primary);
+	transform: scaleX(0);
+	transform-origin: left;
+	transition: transform 0.25s ease;
+}
+
+[data-theme='dribbble'] .rice-ghost:hover::after {
+	transform: scaleX(1);
+}
+
+[data-theme='dribbble'] .nav-link.rice-press:hover {
+	background-color: var(--theme-accent-primary);
+	color: var(--theme-text-inverted);
 }
 
 [data-theme='dribbble'] .rice-press:active {
-	transform: scale(0.96);
-	box-shadow: 0 1px 2px rgba(13, 12, 34, 0.08);
+	transform: none;
+	filter: brightness(0.92);
 }
 
 [data-theme='dribbble'] .rice-lift:hover {
@@ -248,6 +334,26 @@
 
 .site-header {
 	isolation: isolate;
+}
+
+[data-theme='dribbble'] .landing-shell {
+	background: transparent;
+	border-color: transparent;
+	box-shadow: none;
+	border-radius: 0;
+}
+
+[data-theme='dribbble'] .landing-shell + .landing-shell {
+	border-top: 1px solid var(--theme-border-muted);
+}
+
+[data-theme='glass-cafe'] .site-footer .rice-press:hover {
+	transform: none;
+	box-shadow: none;
+}
+
+[data-theme='glass-cafe'] .site-footer .rice-press::after {
+	display: none;
 }
 
 [data-theme='glass-cafe'] .site-header {
