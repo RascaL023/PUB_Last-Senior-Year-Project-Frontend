@@ -17,10 +17,24 @@ function isThemeId(value: string | null): value is ThemeId {
 class ThemeStore {
 	current = $state<ThemeId>(DEFAULT_THEME);
 
-	setTheme(theme: ThemeId) {
+	setTheme(theme: ThemeId, origin?: { x: number; y: number }) {
 		this.current = theme;
 		if (typeof document !== 'undefined') {
-			document.documentElement.setAttribute('data-theme', theme);
+			const root = document.documentElement;
+			const apply = () => root.setAttribute('data-theme', theme);
+			if (origin) {
+				root.style.setProperty('--theme-origin', `${origin.x}px ${origin.y}px`);
+			}
+			const reduced =
+				typeof matchMedia !== 'undefined' &&
+				matchMedia('(prefers-reduced-motion: reduce)').matches;
+			const vt = (
+				document as Document & {
+					startViewTransition?: (cb: () => void) => void;
+				}
+			).startViewTransition;
+			if (vt && !reduced) vt.call(document, apply);
+			else apply();
 		}
 		try {
 			localStorage.setItem(STORAGE_KEY, theme);

@@ -1,0 +1,91 @@
+.reveal {
+	opacity: 0;
+	transform: translateY(26px);
+	transition:
+		opacity 0.6s ease var(--reveal-delay, 0ms),
+		transform 0.6s ease var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
+	opacity: 1;
+	transform: none;
+}
+
+@keyframes rice-shimmer {
+	0% {
+		background-position: -400px 0;
+	}
+	100% {
+		background-position: 400px 0;
+	}
+}
+
+.skeleton-shimmer {
+	background: linear-gradient(
+		90deg,
+		var(--theme-bg-subtle) 25%,
+		var(--theme-bg-card-hover) 50%,
+		var(--theme-bg-subtle) 75%
+	);
+	background-size: 800px 100%;
+	animation: rice-shimmer 1.4s linear infinite;
+}
+
+@keyframes rice-float {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-8px);
+	}
+}
+
+.animate-float {
+	animation: rice-float 5s ease-in-out infinite;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.5s;
+	animation-timing-function: ease;
+}
+
+::view-transition-old(root) {
+	animation-name: rice-theme-out;
+}
+
+::view-transition-new(root) {
+	animation-name: rice-theme-wipe;
+}
+
+@keyframes rice-theme-out {
+	to {
+		opacity: 0.4;
+	}
+}
+
+@keyframes rice-theme-wipe {
+	from {
+		clip-path: circle(0 at var(--theme-origin, 50% 50%));
+	}
+	to {
+		clip-path: circle(150% at var(--theme-origin, 50% 50%));
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.reveal {
+		opacity: 1;
+		transform: none;
+		transition: none;
+	}
+	.skeleton-shimmer,
+	.animate-float {
+		animation: none;
+	}
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
+	}
+}

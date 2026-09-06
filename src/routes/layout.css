@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '../lib/styles/themes.css';
+@import '../lib/styles/motion.css';
 
 @theme inline {
 	--color-app: var(--theme-bg-app);
@@ -47,6 +48,13 @@
 
 html {
 	font-family: var(--theme-font);
+	scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
 }
 
 body {

@@ -312,6 +312,14 @@ Base transition `transform + box-shadow 0.16s ease`, dinonaktifkan saat `prefers
 | `neurobrutalism` | `translate(-1px,-1px)`, shadow `3.5px` | `translate(2px,2px)`, shadow hilang | Tactile press (mockup) |
 | `dribbble` | `translateY(-1px) scale(1.03)`, glow pink lembut, spring `cubic-bezier(0.34,1.4,0.64,1)` | `scale(0.96)` | Capsule pop |
 
+### 2.6 Animasi saat ganti tema (View Transitions API)
+
+Perpindahan tema memakai `document.startViewTransition` — snapshot lama memudar (`rice-theme-out`
+0.5s) sementara snapshot baru masuk dengan circular wipe (`rice-theme-wipe` 0.5s `ease`) yang
+meluas dari titik klik (`--theme-origin`, diisi `themeStore.setTheme(theme, {x, y})` dari koordinat
+`MouseEvent` di `ThemeSwitcher`). Browser tanpa API atau `prefers-reduced-motion` → ganti instan
+tanpa animasi. Tidak ada warna hardcoded; murni snapshot transisi browser.
+
 ---
 
 ## 3. Aturan Tegas Pembuatan UI & Komponen

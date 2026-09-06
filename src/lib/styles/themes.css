@@ -246,6 +246,14 @@
 	box-shadow: 0 12px 28px -14px rgba(13, 12, 34, 0.22);
 }
 
+.site-header {
+	isolation: isolate;
+}
+
+[data-theme='glass-cafe'] .site-header {
+	background-color: var(--theme-bg-overlay);
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.rice-press,
 	.rice-lift,
