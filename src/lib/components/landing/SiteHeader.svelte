@@ -1,5 +1,12 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import ThemeSwitcher from '$lib/components/theme/ThemeSwitcher.svelte';
+	import { session } from '$lib/stores';
+
+	async function handleLogout() {
+		await session.logout();
+		await goto('/');
+	}
 </script>
 
 <header class="site-header border-line bg-shell border-rice backdrop-blur-rice sticky top-0 z-50 w-full border-b">
@@ -17,12 +24,28 @@
 			<a href="#kontak" class="nav-link text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Kontak</a>
 		</div>
 		<div class="flex flex-none items-center gap-2">
-			<a
-				href="/login"
-				class="bg-accent text-inverted rounded-btn border-rice border-line rice-press hidden px-4 py-2 text-xs font-bold sm:inline-block"
-			>
-				Masuk
-			</a>
+			{#if session.status === 'ready' && session.user}
+				<span
+					title={session.user.email}
+					class="border-line bg-subtle text-muted rounded-pill border-rice hidden max-w-40 truncate px-3 py-2 text-xs font-bold sm:inline-block"
+				>
+					{session.user.email}
+				</span>
+				<button
+					type="button"
+					onclick={handleLogout}
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press hidden px-4 py-2 text-xs font-bold sm:inline-block"
+				>
+					Keluar
+				</button>
+			{:else}
+				<a
+					href="/login"
+					class="bg-accent text-inverted rounded-btn border-rice border-line rice-press hidden px-4 py-2 text-xs font-bold sm:inline-block"
+				>
+					Masuk
+				</a>
+			{/if}
 			<ThemeSwitcher compact />
 		</div>
 	</nav>

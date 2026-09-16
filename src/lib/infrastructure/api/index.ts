@@ -2,6 +2,7 @@ import { createInMemoryTokenStore, type TokenStore } from '$lib/core/auth/token-
 import type { HttpClient } from '$lib/core/http/http-client';
 import { createFetchHttpClient } from './fetch-http-client';
 import { createAuthRepository } from './repositories/auth-repository';
+import { createCustomerRepository } from './repositories/customer-repository';
 import { createAuthorityRepository } from './repositories/authority-repository';
 import { createDiningRepository } from './repositories/dining-repository';
 import { createImageRepository } from './repositories/image-repository';
@@ -18,6 +19,7 @@ export interface Api {
 	http: HttpClient;
 	tokens: TokenStore;
 	auth: ReturnType<typeof createAuthRepository>;
+	customers: ReturnType<typeof createCustomerRepository>;
 	users: ReturnType<typeof createUserRepository>;
 	roles: ReturnType<typeof createRoleRepository>;
 	authorities: ReturnType<typeof createAuthorityRepository>;
@@ -40,6 +42,7 @@ export function createApi(): Api {
 		http,
 		tokens,
 		auth: createAuthRepository(http, tokens),
+		customers: createCustomerRepository(http),
 		users: createUserRepository(http),
 		roles: createRoleRepository(http),
 		authorities: createAuthorityRepository(http),

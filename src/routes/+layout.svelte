@@ -2,11 +2,15 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { themeStore } from '$lib/theme/theme.svelte';
+	import { session } from '$lib/stores';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
 
-	onMount(() => themeStore.init());
+	onMount(() => {
+		themeStore.init();
+		void session.restore();
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
