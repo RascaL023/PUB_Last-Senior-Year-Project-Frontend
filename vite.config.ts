@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	server: {
+        allowedHosts: ['dev.rascal.my.id'],
 		proxy: {
 			'/api': {
 				target: 'http://localhost:8081',
