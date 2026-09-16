@@ -1,10 +1,13 @@
 <script lang="ts">
 	import type { MenuResponse } from '$lib/domain/menu';
+	import { cart } from '$lib/stores';
 	import MenuImage from './MenuImage.svelte';
+	import ModifierPickerModal from '$lib/components/cart/ModifierPickerModal.svelte';
 
 	let { menu }: { menu: MenuResponse } = $props();
 
 	const cover = $derived(menu.imageUrls && menu.imageUrls.length > 0 ? menu.imageUrls[0] : null);
+	const picking = $derived(cart.pickerMenu?.id === menu.id);
 </script>
 
 <article class="bg-card rounded-card shadow-rice border-rice border-line rice-lift h-full overflow-hidden">
@@ -32,5 +35,18 @@
 				</span>
 			{/if}
 		</div>
+
+		<button
+			type="button"
+			onclick={() => cart.openPicker(menu)}
+			disabled={!menu.isAvailable}
+			class="bg-accent text-inverted rounded-btn border-rice border-line rice-press mt-3 w-full px-4 py-2 text-xs font-bold disabled:opacity-40"
+		>
+			{menu.isAvailable ? '+ Keranjang' : 'Stok habis'}
+		</button>
 	</div>
 </article>
+
+{#if picking && cart.pickerMenu}
+	<ModifierPickerModal menu={cart.pickerMenu} />
+{/if}

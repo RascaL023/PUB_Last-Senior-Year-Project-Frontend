@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import ThemeSwitcher from '$lib/components/theme/ThemeSwitcher.svelte';
-	import { session } from '$lib/stores';
+	import CartDrawer from '$lib/components/cart/CartDrawer.svelte';
+	import { cart, session } from '$lib/stores';
 
 	async function handleLogout() {
 		await session.logout();
@@ -24,6 +25,21 @@
 			<a href="#kontak" class="nav-link text-muted hover:text-ink rice-press rounded-btn px-4 py-2 text-sm font-bold">Kontak</a>
 		</div>
 		<div class="flex flex-none items-center gap-2">
+			<button
+				type="button"
+				onclick={() => cart.open()}
+				aria-label="Buka keranjang, {cart.itemCount} item"
+				class="bg-subtle text-ink rounded-btn border-rice border-line rice-press relative px-3 py-2 text-sm font-bold"
+			>
+				🧺
+				{#if cart.itemCount > 0}
+					<span
+						class="bg-danger text-inverted rounded-pill absolute -top-2 -right-2 px-1.5 py-0.5 font-mono text-[10px] font-bold"
+					>
+						{cart.itemCount}
+					</span>
+				{/if}
+			</button>
 			{#if session.status === 'ready' && session.user}
 				<span
 					title={session.user.email}
@@ -50,3 +66,5 @@
 		</div>
 	</nav>
 </header>
+
+<CartDrawer />
