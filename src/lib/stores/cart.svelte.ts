@@ -1,6 +1,6 @@
 import type { MenuResponse } from '$lib/domain/menu';
 
-const STORAGE_KEY = 'kopi-rustik-cart-v1';
+const STORAGE_KEY = 'hysteria-cafe-cart-v1';
 
 export interface CartSelection {
 	modifierTypeId: number;

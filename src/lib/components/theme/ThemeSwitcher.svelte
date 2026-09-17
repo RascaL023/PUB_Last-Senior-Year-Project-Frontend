@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { THEMES, themeStore, type ThemeId } from '$lib/theme/theme.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	let { compact = false }: { compact?: boolean } = $props();
 	let activePanel = $state<'theme' | null>(null);
@@ -55,7 +56,7 @@
 			class="theme-trigger border-line text-muted hover:text-ink rounded-pill border-rice rice-press rice-ghost shadow-ricesm px-3 py-2 text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent-primary)]"
 			class:is-open={activePanel === 'theme'}
 		>
-			◐ {short[themeStore.current]}
+			<Icon name="palette" class="h-4 w-4" /> {short[themeStore.current]}
 		</button>
 
 		<div
@@ -76,7 +77,9 @@
 							class:is-current={themeStore.current === theme.id}
 						>
 							<span>{theme.label}</span>
-							<span aria-hidden="true">{themeStore.current === theme.id ? '✓' : ''}</span>
+							{#if themeStore.current === theme.id}
+								<Icon name="check" class="h-3 w-3" />
+							{/if}
 						</button>
 					{/each}
 				</div>

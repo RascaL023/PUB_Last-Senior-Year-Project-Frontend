@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import ThemeSwitcher from '$lib/components/theme/ThemeSwitcher.svelte';
 	import CartDrawer from '$lib/components/cart/CartDrawer.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import { cart, session } from '$lib/stores';
 
 	async function handleLogout() {
@@ -13,9 +14,9 @@
 <header class="site-header border-line bg-shell border-rice backdrop-blur-rice sticky top-0 z-50 w-full border-b">
 	<nav class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6" aria-label="Navigasi utama">
 		<a href="#top" class="flex min-w-0 items-center gap-3">
-			<span class="bg-accent text-inverted rounded-btn flex h-9 w-9 flex-none items-center justify-center text-base font-extrabold">☕</span>
+			<span class="bg-accent text-inverted rounded-btn flex h-9 w-9 flex-none items-center justify-center text-base font-extrabold"><Icon name="coffee" class="h-5 w-5" /></span>
 			<span class="min-w-0">
-				<span class="text-ink font-display block truncate text-base leading-tight font-extrabold tracking-tight">Kopi Rustik</span>
+				<span class="text-ink font-display block truncate text-base leading-tight font-extrabold tracking-tight">Hysteria Cafe</span>
 				<span class="text-muted block text-[11px] leading-tight">Café · sejak 2019</span>
 			</span>
 		</a>
@@ -31,7 +32,7 @@
 				aria-label="Buka keranjang, {cart.itemCount} item"
 				class="bg-subtle text-ink rounded-btn border-rice border-line rice-press relative px-3 py-2 text-sm font-bold"
 			>
-				🧺
+				<Icon name="cart" class="h-5 w-5" />
 				{#if cart.itemCount > 0}
 					<span
 						class="bg-danger text-inverted rounded-pill absolute -top-2 -right-2 px-1.5 py-0.5 font-mono text-[10px] font-bold"

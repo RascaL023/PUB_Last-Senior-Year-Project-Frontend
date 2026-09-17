@@ -5,7 +5,7 @@
 <footer id="kontak" use:reveal class="site-footer border-line bg-shell border-rice w-full scroll-mt-24 border-t px-4 py-10 sm:px-6">
 	<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
 		<div>
-			<h4 class="text-ink mb-3 font-bold">Kopi Rustik</h4>
+			<h4 class="text-ink mb-3 font-bold">Hysteria Cafe</h4>
 			<p class="text-muted text-xs leading-relaxed">Café yang menggabungkan biji kopi premium dengan resep tradisional Indonesia.</p>
 		</div>
 
@@ -21,7 +21,7 @@
 		<div>
 			<h4 class="text-ink mb-3 font-bold">Kontak</h4>
 			<ul class="space-y-2">
-				<li class="text-muted text-xs">admin@kopirustik.id</li>
+				<li class="text-muted text-xs">admin@hysteria.cafe</li>
 				<li class="text-muted text-xs">Jl. Kopi No. 42</li>
 				<li class="text-muted text-xs">Senin-Sabtu 07:00-22:00</li>
 			</ul>
@@ -38,7 +38,7 @@
 	</div>
 
 	<div class="mx-auto mt-8 w-full max-w-7xl border-linemuted border-t pt-6 text-center">
-		<p class="text-faint text-xs">© 2026 Kopi Rustik. All rights reserved.</p>
+		<p class="text-faint text-xs">© 2026 Hysteria Cafe. All rights reserved.</p>
 	</div>
 </footer>
 

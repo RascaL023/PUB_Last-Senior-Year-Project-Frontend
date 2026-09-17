@@ -16,7 +16,7 @@
 				in:fly={{ y: 28, duration: motionDuration(500), delay: motionDuration(90) }}
 				class="text-ink font-display mt-4 text-4xl font-extrabold tracking-tight sm:text-5xl"
 			>
-				Kopi Rustik
+				Hysteria Cafe
 			</h1>
 			<p
 				in:fly={{ y: 28, duration: motionDuration(500), delay: motionDuration(180) }}
@@ -50,12 +50,12 @@
 			<div class="bg-card rounded-card shadow-rice border-rice border-line rice-lift overflow-hidden">
 				<MenuImage
 					src="/images/hero-coffee.jpg"
-					alt="Secangkir kopi signature Kopi Rustik"
+					alt="Secangkir kopi signature Hysteria Cafe"
 					wrapperClass="aspect-[16/10] w-full"
 				/>
 				<div class="flex items-center justify-between gap-2 p-4">
 					<div>
-						<p class="text-ink text-sm font-bold">Signature Rustik</p>
+						<p class="text-ink text-sm font-bold">Signature Hysteria</p>
 						<p class="text-muted text-xs">Arabika Gayo · medium roast</p>
 					</div>
 					<span class="bg-leaf text-inverted rounded-pill border-rice border-line shadow-ricesm px-2 py-0.5 font-mono text-xs font-bold whitespace-nowrap">Favorit</span>

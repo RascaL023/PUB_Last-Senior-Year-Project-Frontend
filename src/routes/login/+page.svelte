@@ -57,7 +57,7 @@
 </script>
 
 <svelte:head>
-	<title>Masuk — Kopi Rustik</title>
+	<title>Masuk — Hysteria Cafe</title>
 </svelte:head>
 
 <main class="font-theme bg-app text-ink flex min-h-screen items-center justify-center px-4 py-10">

@@ -3,6 +3,7 @@
 	import { cart, describeSelections } from '$lib/stores';
 	import { motionDuration } from '$lib/actions/reveal';
 	import MenuImage from '$lib/components/landing/MenuImage.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	function handleKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') cart.close();
@@ -37,13 +38,13 @@
 				aria-label="Tutup keranjang"
 				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-sm font-bold"
 			>
-				✕
+									<Icon name="close" class="h-4 w-4" />
 			</button>
 		</div>
 
 		{#if cart.isEmpty}
 			<div class="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-				<span class="text-4xl" aria-hidden="true">🧺</span>
+				<Icon name="cart" class="h-10 w-10" />
 				<p class="text-ink text-sm font-bold">Keranjang masih kosong</p>
 				<p class="text-muted text-xs">Yuk pilih menu favoritmu dulu.</p>
 				<button
@@ -68,7 +69,7 @@
 									aria-label="Hapus {line.menuName}"
 									class="text-faint hover:text-danger px-1 text-sm font-bold"
 								>
-									✕
+				<Icon name="close" class="h-4 w-4" />
 								</button>
 							</div>
 							{#if line.selections.length > 0}

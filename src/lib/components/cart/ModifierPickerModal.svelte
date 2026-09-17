@@ -3,6 +3,7 @@
 	import type { MenuResponse } from '$lib/domain/menu';
 	import { cart } from '$lib/stores';
 	import { motionDuration } from '$lib/actions/reveal';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	let { menu }: { menu: MenuResponse } = $props();
 
@@ -98,7 +99,7 @@
 				aria-label="Tutup"
 				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-sm font-bold"
 			>
-				✕
+				<Icon name="close" class="h-4 w-4" />
 			</button>
 		</div>
 
