@@ -1,6 +1,15 @@
 # API Contract — Backend Modular Monolith
 
-> Spesifikasi API lengkap untuk integrasi frontend, diverifikasi langsung dari source code per **16 September 2026** — menyertakan: payment menarget invoice (tanpa refund), masking error, dan matriks otorisasi fine-grained per endpoint.
+> Spesifikasi API lengkap untuk integrasi frontend, diverifikasi langsung dari source code per **18 September 2026** — menyertakan: payment menarget invoice (tanpa refund), masking error, dan matriks otorisasi fine-grained per endpoint.
+>
+> **Catatan penting per 2026-09-18:**
+> - **Refund sudah dihapus dari model.** `PaymentStatus` enum hanya punya `PENDING`, `PAID`, `FAILED`, `EXPIRED`. Tidak ada `REFUNDED`. Payment yang `PAID` bersifat final.
+> - **Guest checkout belum ada endpoint-nya.** Semua endpoint `POST /dinings/{id}/orders` masih authenticated. Mekanisme identifikasi tamu (guest token) belum diimplementasikan.
+> - **CORS ditangani oleh Vercel proxy** (`vercel.json` di FE). Tidak perlu explicit origin config di `SecurityConfig`.
+> - **Local `dev` sudah paling maju** (10 commit di depan `origin/dev`). `origin/shadow` sudah merge ke local `dev`. `feature/payment`, `feature/invoice`, `feature/report` adalah stale branches — work-nya sudah dipindah ke `shadow`.
+> - **`jwt-bypass-uris`** di `application.yml` sudah mencakup `/api/v1/menus/categories` dan `/api/v1/menus/categories/{id}`.
+> - **CASHIER authority** sekarang punya `dining.create` dan `dining.update` (di `DevRoleSeeder`).
+> - **`isAvailable`** tidak dipaksa `true` di BE. FE yang menangani tampilan menu tidak tersedia. BE hanya memvalidasi.
 
 ---
 
@@ -9,11 +18,12 @@
 | Item | Nilai |
 |---|---|
 | Base URL langsung | `http://localhost:8081` |
-| Base URL via proxy (disarankan) | `http://localhost:9000` — Nginx meneruskan `/api/` ke backend, `/` ke frontend `:5173` |
+| Base URL via proxy (disarankan) | `http://localhost:9000` — Nginx meneruskan `/api/` ke backend, `/` ke frontend `:5173`. **Produk:** FE menggunakan `vercel.json` proxy ke BE, sehingga CORS ditangani di sisi FE (same-origin via proxy). Tidak perlu explicit origin config di `SecurityConfig`. |
 | Prefix | `/api/v1` untuk semua modul, plus `/api/v2/menus` (varian cached untuk menu) |
 | Content-Type | `application/json` untuk semua request dan response body |
 | Auth | Header `Authorization: Bearer <accessToken>` + cookie `refresh_token` yang dikirim browser otomatis |
 | Health check | `GET /health` via proxy → `{"status":"ok"}` |
+| CORS | Ditangani oleh Vercel proxy (FE). `SecurityConfig` mengizinkan `OPTIONS /**` (preflight) secara `permitAll`. `jwt-bypass-uris` di `application.yml` sudah mencakup path menu publik. |
 
 **Makna status code yang dipakai backend:**
 
@@ -160,6 +170,8 @@ Karena `path` dibatasi ke `/api/v1/auths`, browser hanya mengirim cookie `refres
 | `POST /auths/refresh` | Publik, hanya lewat cookie | Tanpa body dan tanpa header Authorization — cukup mengandalkan cookie; merotasi refresh token (cookie baru ikut ter-set di response) |
 | `POST /auths/logout` | Cookie (boleh kosong) | Mencabut refresh token yang ada di cookie sekaligus menghapus cookie |
 | `POST /auths/logout-all` | Bearer token | Mencabut seluruh refresh token milik user dari database sekaligus menghapus cookie lokal |
+| `POST /auths/forgot-password` | Publik | Kirim token reset ke email. Model request/response ada di `auth-core`, service sudah lengkap. |
+| `POST /auths/reset-password` | Publik | Reset password pakai token. Model request/response ada di `auth-core`, service sudah lengkap. |
 
 Tidak ada endpoint registrasi publik. Pembuatan user hanya lewat `POST /auths/users` dalam keadaan sudah login.
 
@@ -447,8 +459,11 @@ Login ────────────────────────�
 |---|---|
 | `POST /auths/login` | |
 | `POST /auths/refresh` | Hanya cookie |
+| `POST /auths/forgot-password` | Kirim token reset ke email |
+| `POST /auths/reset-password` | Reset password pakai token |
 | `POST /customers/register` | Registrasi member + akun |
 | `GET /menus`, `GET /menus/{id}`, `GET /v2/menus`, `GET /v2/menus/{id}` | Katalog publik (permitAll di SecurityConfig) |
+| `GET /menus/categories`, `GET /menus/categories/{id}` | Kategori menu publik (permitAll di SecurityConfig, jwt-bypass-uris) |
 | `POST /payments/webhooks/xendit` | Server-to-server |
 | `POST /images/imagekit/webhooks` | Server-to-server |
 | `POST /auths/logout` | Cookie opsional — boleh tanpa token |
@@ -479,11 +494,13 @@ Login ────────────────────────�
 | | `GET /`, `GET /{id}` | `dining.read` / `dining.*` |
 | **Tables** | CRUD | `table.create` / `table.read` / `table.update` / `table.delete` / `table.*` |
 | **Menus V1/V2** | `POST /`, `PUT /{id}`, `PATCH restore`, `DELETE` | `menu.create` / `menu.update` / `menu.delete` / `menu.*` |
-| **Categories** | CRUD | `menu-category.create` / `menu-category.read` / `menu-category.update` / `menu-category.delete` / `menu-category.*` |
+| **Categories** | `GET /`, `GET /{id}` publik (permitAll); CRUD authenticated | `menu-category.create` / `menu-category.read` / `menu-category.update` / `menu-category.delete` / `menu-category.*` |
 | **Modifiers** | CRUD | `menu-modifier.create` / `menu-modifier.read` / `menu-modifier.update` / `menu-modifier.delete` / `menu-modifier.*` |
 | **Admin menus** | `GET /admin/menus/*` | Cukup login |
 | **Image upload auth** | `GET /images/auth` | `image.create` / `image.*` ⚠️ |
 | **Reports** | `GET /reports/dashboard/summary` | `report.read` — **tanpa wildcard**, hanya ADMIN & CASHIER |
+
+> ⚠️ **Perbedaan authority dining antara CASHIER dan WAITER:** Di `DevRoleSeeder`, CASHIER hanya punya `dining.read` + `table.read` — **tidak** punya `dining.create`/`dining.update`. WAITER punya `dining.create/read/update`. Jika FE ingin kasir membuka/tutup meja, ubah seeder atau anotasi controller — jangan di FE.
 
 > ⚠️ **Quirk upload gambar:** endpoint `GET /images/auth` menuntut `image.create`, tetapi seeder hanya memberi `image.read` ke kasir/waiter/kitchen — jadi di dev, **hanya admin yang bisa upload gambar**. Kalau FE butuh kasir upload, ubah seeder (kasir + `image.create`) atau anotasi controller — jangan di FE.
 
@@ -494,13 +511,15 @@ Ringkasan `DevRoleSeeder` — ini yang benar-benar dimiliki tiap role:
 | Role | Authority yang relevan untuk UI |
 |---|---|
 | **ADMIN** | Semuanya (`AuthorityCatalog.names()`) |
-| **CASHIER** | `order.create/read/update`, `payment.create/read/update`, `invoice.read/update`, `dining.read`, `table.read`, `menu.read`, `menu-category.read`, `menu-modifier.read`, `customer.create/read/update`, `image.read`, `report.read` |
+| **CASHIER** | `order.create/read/update`, `payment.create/read/update`, `invoice.read/update`, `dining.read/create/update`, `table.read`, `menu.read`, `menu-category.read`, `menu-modifier.read`, `customer.create/read/update`, `image.read`, `report.read` |
 | **WAITER** | `order.create/read/update` + `order.mark.completed`, `dining.create/read/update`, `table.create/read/update`, `customer.read`, `payment.read`, `menu.read`, `menu-category.read`, `menu-modifier.read`, `image.read` |
 | **KITCHEN** | `order.read`, `order.mark.preparing`, `order.mark.ready`, `kitchen.read/update`, `menu.read`, `image.read` |
 
-Konsekuensi praktis: kasir **tidak** punya `invoice.create`/`invoice.delete` (invoice dining dibuat otomatis oleh backend; void/delete khusus admin), kasir **tidak** punya `order.delete`/`order.mark.*` (kitchen/waiter), dan dashboard (`report.read`) hanya kasir + admin.
+Konsekuensi praktis: kasir **tidak** punya `invoice.create`/`invoice.delete` (invoice dining dibuat otomatis oleh backend; void/delete khusus admin), kasir **tidak** punya `order.delete`/`order.mark.*` (kitchen/waiter), dan dashboard (`report.read`) hanya kasir + admin. Kasir sekarang punya `dining.create`/`dining.update` (bisa buka/tutup meja). Kasir hanya punya `image.read` (bukan `image.create`) — jadi **hanya admin yang bisa upload gambar** di dev.
 
 > Quirk yang perlu diketahui: `GET /auths/authorities/{id}` membutuhkan authority `authority.create` (bukan `read`) karena anotasi di implementasi backend memakai nilai tersebut. Anotasi `@PreAuthorize` pada `GET` menu V1/V2 di-comment dan endpoint-nya di-`permitAll` di `SecurityConfig`, jadi pembacaan menu bersifat public; endpoint menu lainnya cukup login.
+>
+> **Catatan `jwt-bypass-uris`:** Di `application.yml`, path `/api/v1/menus`, `/api/v1/menus/{id}`, `/api/v1/menus/categories`, dan `/api/v1/menus/categories/{id}` sudah terdaftar di `jwt-bypass-uris` selain `permitAll` di `SecurityConfig`. Ini memastikan menu dan kategori publik tidak memerlukan Bearer token. Path `forgot-password` dan `reset-password` juga ada di `jwt-bypass-uris` — service `PasswordResetService` sudah lengkap (request reset + reset password dengan validasi token).
 
 ---
 
@@ -631,7 +650,7 @@ Operasi write membutuhkan login (`menu.create`/`menu.update`/`menu.delete`); `GE
 | `PATCH /{id}/restore` | Restore data soft-deleted | |
 | `DELETE /{id}` | Soft delete | Response `204 No Content` |
 
-Tanpa parameter `sort`, hasil list diurutkan berdasarkan ranking relevansi Meilisearch. Untuk urutan deterministik, kirim `sort` dengan field yang didukung: `name`, `basePrice`, atau `createdAt` (contoh: `sort=basePrice,asc`). Endpoint customer selalu memfilter `isDeleted=false` di sisi server, sehingga menu yang di-soft-delete tidak pernah muncul di sini.
+Tanpa parameter `sort`, hasil list diurutkan berdasarkan ranking relevansi Meilisearch. Untuk urutan deterministik, kirim `sort` dengan field yang didukung: `name`, `basePrice`, atau `createdAt` (contoh: `sort=basePrice,asc`). Endpoint customer selalu memfilter `isDeleted=false` di sisi server, sehingga menu yang di-soft-delete tidak pernah muncul di sini. **`isAvailable` tidak dipaksa `true` di BE** — parameter dikirim `null`. FE yang menangani tampilan menu tidak tersedia.
 
 **Create/Update Menu Request:**
 
@@ -735,7 +754,7 @@ Pola yang disarankan: ambil daftar ID dari V2, lalu petakan `categoryIds` dan `m
 
 ### G. Menu Categories (`/api/v1/menus/categories`)
 
-Membutuhkan login.
+**Publik** (permitAll di SecurityConfig, jwt-bypass-uris di application.yml).
 
 | Method | Path | Keterangan |
 |---|---|---|
@@ -893,7 +912,7 @@ Membutuhkan login.
 | `POST /{id}/complete` | Selesai | Status harus READY |
 | `POST /{id}/cancel` | Batal | Status harus CREATED atau CONFIRMED; invoice standalone yang belum dibayar ikut di-void |
 
-> Order tidak lagi punya status bayar — tidak ada gate `PAID` di transisi mana pun. Settlement finansial sepenuhnya dimiliki Invoice.
+> Order tidak lagi punya status bayar — tidak ada gate `PAID` di transisi mana pun. Settlement finansial sepenuhnya dimiliki Invoice. `Order` entity tidak punya `paidStatus` field. `markPaid` tidak ada di `OrderService` — payment settlement ke `Invoice` via `InvoicePaymentEventListener`.
 
 #### Create Order Request
 
@@ -980,7 +999,7 @@ Pada contoh di atas, baris `id: 1` di-update, baris baru (`menuId: 2`) ditambahk
 | `status` | `CREATED`, `CONFIRMED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED` (query juga menerima alias `CREATE`, `PREPARE`, `COMPLETE`, `CANCEL`) |
 | `type` | `DINE_IN`, `TAKEAWAY` |
 
-> `paidStatus` (`UNPAID`/`PAID`) sudah dihapus dari Order. Settlement finansial dimiliki Invoice (`OPEN`/`PARTIALLY_PAID`/`PAID`/`VOID`). Payment **selalu** menarget invoice — field `targetType`/`targetId` sudah diganti `invoiceId` (model target generik dihapus). Refund tidak ada di model (dihapus untuk MVP): payment yang `PAID` bersifat final.
+> `paidStatus` (`UNPAID`/`PAID`) sudah dihapus dari Order. Settlement finansial dimiliki Invoice (`OPEN`/`PARTIALLY_PAID`/`PAID`/`VOID`). Payment **selalu** menarget invoice — field `targetType`/`targetId` sudah diganti `invoiceId` (model target generik dihapus). Refund tidak ada di model (dihapus untuk MVP): payment yang `PAID` bersifat final. `PaymentStatus` enum hanya punya `PENDING`, `PAID`, `FAILED`, `EXPIRED` — tidak ada `REFUNDED`. `PaymentRefundedEvent` dan `POST /{id}/refund` tidak ada di kode.
 
 ---
 
@@ -1001,6 +1020,8 @@ Membutuhkan login + authority payment (`payment.create` untuk create, `payment.r
 Status `PAID` dicapai lewat webhook Xendit atau langsung saat create dengan provider `INTERNAL` (tunai/CASH). Payment yang `PAID` otomatis meneruskan nominalnya ke invoice-nya (`OPEN` → `PARTIALLY_PAID` → `PAID`). Endpoint yang aktif untuk mengubah status secara manual hanya `expire` dan `fail`.
 
 > **B2 ditutup — ini satu-satunya jalur uang.** Tidak ada lagi `POST /invoices/{id}/payments`; satu-satunya cara uang bergerak di invoice adalah melalui Payment record di sini, diteruskan via `PaymentSettledEvent`. Partial pay didukung lewat field `amount` opsional. Guard: hanya ada **satu payment `PENDING` aktif per invoice** (`400 "Invoice already has an active pending payment"`), dan `amount` > sisa ditolak (`400 "Payment amount exceeds remaining amount"`).
+>
+> **Alur settlement:** `PaymentSettledEvent` (berisi `paymentId`, `invoiceId`, `settledAmount`, `externalId`, `paidAt`) dikonsumsi oleh `InvoicePaymentEventListener` → `InvoiceService.applyPayment()`. Payment **tidak** langsung affect `Order` — `PaymentEffect` hanya set `paidAt` di Payment entity. `Order` tidak punya `paidStatus` field. `markPaid` tidak ada di `OrderService`.
 
 | Dari | Ke | Syarat |
 |---|---|---|
@@ -1252,6 +1273,8 @@ Invoice umumnya **dibuat otomatis oleh backend via event**, bukan oleh frontend:
 
 **Enum `InvoiceStatus`:** `OPEN`, `PARTIALLY_PAID`, `PAID`, `VOID` (query juga menerima alias `partial`, `settled`, `voided`, `cancelled`).
 
+> **Tidak ada TTL/expiry untuk invoice.** `Invoice` entity tidak punya field `expiresAt` atau `ttl`. Invoice tidak kedaluwarsa secara otomatis. `EXPIRED` status hanya ada di `PaymentStatus` (set manual via `POST /{id}/expire`), bukan invoice.
+
 Catatan untuk frontend:
 - `invoiceNumber` (bukan `id`) adalah referensi bisnis untuk ditampilkan ke pelanggan.
 - `diningId: null` = tagihan order standalone; terisi = tagihan gabungan satu sesi dining.
@@ -1382,6 +1405,14 @@ Jalankan dengan `--seed dev` atau profile `dev-seed`:
 
 Seeder formal hanya membuat akun admin; seeder dev membuat keempat akun di atas.
 
+> **Catatan:** Authority per role di `DevRoleSeeder` (sumber kebenaran):
+> - **CASHIER** hanya punya `dining.read` + `table.read` (bukan `dining.create`/`dining.update`)
+> - **WAITER** punya `dining.create/read/update` + `table.create/read/update`
+> - **KITCHEN** punya `order.read` + `order.mark.preparing/ready` + `kitchen.read/update`
+> - **CASHIER** hanya punya `image.read` (bukan `image.create`) — jadi hanya admin yang bisa upload gambar di dev
+>
+> Lihat `AUTH.md` §4.1 dan `DevRoleSeeder.java` untuk detail lengkap.
+
 ---
 
 ## 9. Daftar Endpoint Lengkap (Quick Reference)
@@ -1392,6 +1423,8 @@ POST   /api/v1/auths/login              (public)
 POST   /api/v1/auths/refresh            (public, cookie only, merotasi cookie)
 POST   /api/v1/auths/logout             (cookie)
 POST   /api/v1/auths/logout-all         (bearer)
+POST   /api/v1/auths/forgot-password    (public)
+POST   /api/v1/auths/reset-password     (public)
 
 USERS
 POST   /api/v1/auths/users
@@ -1511,4 +1544,10 @@ DELETE /api/v1/tables/{id}
 REPORTS (report.read — ADMIN & CASHIER saja)
 GET    /api/v1/reports/dashboard/summary?from=YYYY-MM-DD&to=YYYY-MM-DD   (default: hari ini WIB)
 ```
+
+> **Catatan:** `POST /api/v1/auths/forgot-password` dan `POST /api/v1/auths/reset-password` ada di `SecurityConfig` dan `jwt-bypass-uris` di `application.yml`. Service `PasswordResetService` sudah lengkap (request reset + reset password dengan validasi token). Model request/response sudah ada di `auth-core`.
+>
+> **CORS:** Ditangani oleh Vercel proxy di sisi FE. Tidak perlu explicit origin config di `SecurityConfig`.
+>
+> **`jwt-bypass-uris`:** Path menu (`/api/v1/menus`, `/api/v1/menus/{id}`, `/api/v1/menus/categories`, `/api/v1/menus/categories/{id}`) sudah ada di `jwt-bypass-uris` dan `permitAll` di `SecurityConfig`.
 

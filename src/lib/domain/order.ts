@@ -8,8 +8,6 @@ export type OrderStatus =
 
 export type OrderType = 'DINE_IN' | 'TAKEAWAY';
 
-export type OrderPaidStatus = 'UNPAID' | 'PAID';
-
 export interface OrderItemModifierRequest {
 	id?: number;
 	modifierOptionId: number;
@@ -62,7 +60,6 @@ export interface OrderResponse {
 	orderNumber: string;
 	status: OrderStatus;
 	type: OrderType;
-	paidStatus: OrderPaidStatus;
 	customerId: number | null;
 	customerName: string | null;
 	notes: string | null;
@@ -75,7 +72,6 @@ export interface OrderResponse {
 export interface OrderListQuery {
 	keyword?: string;
 	status?: OrderStatus;
-	paidStatus?: OrderPaidStatus;
 	page?: number;
 	size?: number;
 	sort?: string;

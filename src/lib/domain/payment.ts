@@ -1,21 +1,18 @@
-export type PaymentTargetType = 'ORDER' | 'DINE_IN';
-
 export type PaymentProvider = 'INTERNAL' | 'XENDIT';
 
-export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED' | 'REFUNDED';
+export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
 
 export interface PaymentRequest {
-	targetType: PaymentTargetType;
-	targetId: number;
+	invoiceId: number;
 	paymentProvider: PaymentProvider;
 	paymentDetail?: string;
+	amount?: number;
 }
 
 export interface PaymentResponse {
 	id: number;
-	targetType: PaymentTargetType;
-	targetId: number;
-	targetReference: string;
+	invoiceId: number;
+	invoiceNumber: string;
 	paymentProvider: PaymentProvider;
 	paymentMethodName: string | null;
 	externalId: string | null;
@@ -24,15 +21,15 @@ export interface PaymentResponse {
 	paymentChannel: string | null;
 	paymentDetail: string | null;
 	amount: number;
+	appliedAmount: number;
+	excessAmount: number;
 	paidAt: string | null;
 	createdAt: string;
 	updatedAt: string;
 }
 
 export interface PaymentListQuery {
-	keyword?: string;
-	targetType?: PaymentTargetType;
-	targetId?: number;
+	invoiceId?: number;
 	status?: PaymentStatus;
 	paymentProvider?: PaymentProvider;
 	page?: number;
@@ -40,4 +37,4 @@ export interface PaymentListQuery {
 	sort?: string;
 }
 
-export type PaymentTransition = 'expire' | 'fail' | 'refund';
+export type PaymentTransition = 'expire' | 'fail';
