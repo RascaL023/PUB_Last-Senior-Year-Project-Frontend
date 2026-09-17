@@ -1,4 +1,5 @@
 import type { PagedResult } from '$lib/core/types/pagination';
+import type { RequestOptions } from '$lib/core/http/http-client';
 import type {
 	MenuCategoryListQuery,
 	MenuCategoryPutRequest,
@@ -8,7 +9,7 @@ import type {
 
 export interface MenuCategoryRepository {
 	create(payload: MenuCategoryRequest): Promise<MenuCategoryResponse>;
-	list(query?: MenuCategoryListQuery): Promise<PagedResult<MenuCategoryResponse>>;
+	list(query?: MenuCategoryListQuery, options?: RequestOptions): Promise<PagedResult<MenuCategoryResponse>>;
 	getById(id: number): Promise<MenuCategoryResponse>;
 	update(id: number, payload: MenuCategoryPutRequest): Promise<MenuCategoryResponse>;
 	restore(id: number): Promise<MenuCategoryResponse>;

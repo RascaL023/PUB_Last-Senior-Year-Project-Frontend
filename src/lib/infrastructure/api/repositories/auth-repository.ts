@@ -1,7 +1,7 @@
 import { API_AUTH } from '$lib/config/env';
 import type { TokenStore } from '$lib/core/auth/token-store';
 import type { HttpClient } from '$lib/core/http/http-client';
-import type { LoginRequest, LoginResponse, RefreshResponse } from '$lib/domain/auth';
+import type { LoginRequest, LoginResponse, RefreshResponse, ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse } from '$lib/domain/auth';
 import type { AuthRepository } from '$lib/domain/ports/auth-repository';
 
 export function createAuthRepository(http: HttpClient, tokens: TokenStore): AuthRepository {
@@ -36,6 +36,20 @@ export function createAuthRepository(http: HttpClient, tokens: TokenStore): Auth
 			} finally {
 				tokens.clear();
 			}
+		},
+		async forgotPassword(payload: ForgotPasswordRequest): Promise<ForgotPasswordResponse> {
+			const data = await http.post<ForgotPasswordResponse>(`${API_AUTH}/forgot-password`, payload, {
+				auth: false
+			});
+			if (!data) throw new Error('Empty response');
+			return data;
+		},
+		async resetPassword(payload: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+			const data = await http.post<ResetPasswordResponse>(`${API_AUTH}/reset-password`, payload, {
+				auth: false
+			});
+			if (!data) throw new Error('Empty response');
+			return data;
 		}
 	};
 }

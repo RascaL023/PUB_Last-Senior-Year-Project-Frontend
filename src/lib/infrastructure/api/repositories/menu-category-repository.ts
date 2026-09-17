@@ -1,5 +1,6 @@
 import { API_V1 } from '$lib/config/env';
 import type { HttpClient } from '$lib/core/http/http-client';
+import type { RequestOptions } from '$lib/core/http/http-client';
 import type {
 	MenuCategoryListQuery,
 	MenuCategoryPutRequest,
@@ -14,7 +15,8 @@ export function createMenuCategoryRepository(http: HttpClient): MenuCategoryRepo
 	return {
 		create: (payload: MenuCategoryRequest) =>
 			http.post<MenuCategoryResponse>(BASE, payload) as Promise<MenuCategoryResponse>,
-		list: (query?: MenuCategoryListQuery) => http.getPaged<MenuCategoryResponse>(BASE, { query }),
+		list: (query?: MenuCategoryListQuery, options?: RequestOptions) =>
+			http.getPaged<MenuCategoryResponse>(BASE, { query, auth: options?.auth }),
 		getById: (id: number) =>
 			http.getSingle<MenuCategoryResponse>(`${BASE}/${id}`) as Promise<MenuCategoryResponse>,
 		update: (id: number, payload: MenuCategoryPutRequest) =>

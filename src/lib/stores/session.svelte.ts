@@ -1,6 +1,7 @@
 import { getApi } from '$lib/infrastructure/api/index';
 import { decodeAccessToken } from '$lib/core/auth/jwt';
 import type { CustomerRegisterRequest, CustomerResponse } from '$lib/domain/customer';
+import type { ForgotPasswordRequest, ResetPasswordRequest } from '$lib/domain/auth';
 
 const api = getApi();
 
@@ -86,6 +87,14 @@ class SessionStore {
 			this.user = null;
 			this.status = 'guest';
 		}
+	}
+
+	async forgotPassword(email: string): Promise<void> {
+		await api.auth.forgotPassword({ email });
+	}
+
+	async resetPassword(token: string, password: string): Promise<void> {
+		await api.auth.resetPassword({ token, password });
 	}
 }
 

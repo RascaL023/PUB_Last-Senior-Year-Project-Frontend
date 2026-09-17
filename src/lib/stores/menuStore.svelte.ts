@@ -51,7 +51,7 @@ export class MenuStore {
 
 	async loadCategories() {
 		try {
-			const result: PagedResult<MenuCategoryResponse> = await api.categories.list({ size: 50 });
+			const result: PagedResult<MenuCategoryResponse> = await api.categories.list({ size: 50 }, { auth: false });
 			this.categories = result.items;
 		} catch {
 			this.categories = [];
