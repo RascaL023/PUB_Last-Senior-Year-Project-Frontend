@@ -32,6 +32,12 @@
 			show: can('payment.create')
 		},
 		{
+			label: 'Tagihan',
+			href: '/invoices',
+			icon: 'receipt',
+			show: can('invoice.read')
+		},
+		{
 			label: 'Dapur',
 			href: '/kitchen',
 			icon: 'kitchen',

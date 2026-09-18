@@ -3,6 +3,7 @@
 	import { getApi } from '$lib/infrastructure/api/index';
 	import { session } from '$lib/stores';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import type { DiningResponse, DiningListQuery } from '$lib/domain/dining';
 	import type { PagedResult } from '$lib/core/types/pagination';
 	import type { AppError } from '$lib/core/http/http-errors';
@@ -61,8 +62,13 @@
 	<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight mb-4">Manajemen Meja</h2>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error.message}
+		<div class="mb-4">
+			<ErrorState
+				code={error.status}
+				title="Gagal Memuat Meja"
+				message={error.message}
+				onRetry={() => loadDining()}
+			/>
 		</div>
 	{/if}
 
@@ -100,6 +106,7 @@
 						<th class="text-left py-3 px-4 text-muted font-mono font-bold">Status</th>
 						<th class="text-left py-3 px-4 text-muted font-mono font-bold">Total</th>
 						<th class="text-left py-3 px-4 text-muted font-mono font-bold">Tertutup</th>
+						<th class="text-left py-3 px-4 text-muted font-mono font-bold">Tamu</th>
 						{#if canClose}
 							<th class="text-right py-3 px-4 text-muted font-mono font-bold">Aksi</th>
 						{/if}
@@ -107,21 +114,42 @@
 				</thead>
 				<tbody>
 					{#if loading}
-						<tr><td colspan="6" class="py-8 text-center text-muted">Memuat...</td></tr>
+						<tr><td colspan="7" class="py-8 text-center text-muted">Memuat...</td></tr>
 					{:else if diningList.length === 0}
-						<tr><td colspan="6" class="py-8 text-center text-muted">Tidak ada data meja</td></tr>
+						<tr><td colspan="7" class="py-8 text-center text-muted">Tidak ada data meja</td></tr>
 					{:else}
 						{#each diningList as dining}
 							<tr class="border-line border-b border-rice rice-lift">
 								<td class="py-3 px-4 font-mono font-bold text-ink">{dining.tableNumber}</td>
 								<td class="py-3 px-4">
 									<span class="rounded-pill px-2 py-0.5 font-mono text-xs font-bold
-										{dining.status === 'OPEN' ? 'bg-sky text-inverted' : 'bg-leaf text-inverted'}">
+										{dining.status === 'OPEN' ? 'bg-honey text-ink' : 'bg-danger text-inverted'}">
 										{dining.status}
 									</span>
 								</td>
 								<td class="py-3 px-4 font-mono text-ink">{dining.totalPrice.toLocaleString('id-ID')}</td>
 								<td class="py-3 px-4 text-muted">{dining.closedAt ?? '-'}</td>
+								<td class="py-3 px-4">
+									{#if dining.status === 'OPEN' && dining.guestCode}
+										<div class="flex items-center gap-2">
+											<span class="bg-subtle text-muted rounded-pill px-2 py-0.5 font-mono text-xs font-bold">
+												{dining.guestCode}
+											</span>
+											{#if dining.guestToken}
+												<a
+													href={`/guest/${dining.guestToken}`}
+													target="_blank"
+													rel="noopener"
+													class="text-accent text-xs font-bold rice-press hover:underline"
+												>
+													Link tamu
+												</a>
+											{/if}
+										</div>
+									{:else}
+										<span class="text-faint text-xs">-</span>
+									{/if}
+								</td>
 								{#if canClose && dining.status === 'OPEN'}
 									<td class="py-3 px-4 text-right">
 										<button

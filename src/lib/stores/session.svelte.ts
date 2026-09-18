@@ -34,6 +34,21 @@ class SessionStore {
 		return this.user?.roles.includes(role) ?? false;
 	}
 
+	/** Landing per role dari authorities (FE_INTEGRATION §2). */
+	resolveLanding(): string {
+		const authorities = this.user?.authorities ?? [];
+		if (authorities.includes('report.read')) return '/reports';
+		if (authorities.includes('kitchen.read') || authorities.includes('kitchen.*')) return '/kitchen';
+		if (
+			authorities.includes('dining.read') ||
+			authorities.includes('dining.*') ||
+			authorities.includes('order.read') ||
+			authorities.includes('order.*')
+		)
+			return '/floor';
+		return '/my';
+	}
+
 	private applySession(id: number, email: string, accessToken: string): void {
 		const claims = decodeAccessToken(accessToken);
 		if (!claims || !claims.sub) {

@@ -9,13 +9,18 @@
 	let showPassword = $state(false);
 	let busy = $state(false);
 
+	const hasExplicitRedirect = $derived(page.url.searchParams.has('redirectTo'));
 	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/');
 	const registerHref = $derived(
-		redirectTo === '/' ? '/register' : `/register?redirectTo=${encodeURIComponent(redirectTo)}`
+		redirectTo === '/' && !hasExplicitRedirect
+			? '/register'
+			: `/register?redirectTo=${encodeURIComponent(redirectTo)}`
 	);
 
 	$effect(() => {
-		if (session.status === 'ready') void goto(redirectTo);
+		if (session.status === 'ready' && session.user) {
+			void goto(hasExplicitRedirect ? redirectTo : session.resolveLanding());
+		}
 	});
 
 	function validate(): boolean {
@@ -34,7 +39,11 @@
 		busy = true;
 		try {
 			await session.login(email.trim(), password);
-			await goto(redirectTo);
+			if (hasExplicitRedirect) {
+				await goto(redirectTo);
+			} else {
+				await goto(session.resolveLanding());
+			}
 		} catch {
 			// Toast sudah ditampilkan oleh session.login()
 		} finally {

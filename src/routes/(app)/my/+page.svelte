@@ -134,10 +134,10 @@
 							</div>
 							<button
 								type="button"
-								onclick={() => goto(`/guest/${btoa(dining.guestToken)}`)}
+								onclick={() => goto(`/my/dinings/${dining.guestToken}`)}
 								class="text-accent font-bold text-sm rice-press"
 							>
-								Lihat
+								Lanjut pesan
 							</button>
 						</div>
 					</div>

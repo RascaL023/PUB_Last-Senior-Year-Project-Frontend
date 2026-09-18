@@ -10,12 +10,15 @@
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	let { params }: { params: { token: string } } = $props();
-	const guestToken = $derived(params.token);
-	const guestCode = $derived(atob(guestToken));
+	const routeParam = $derived(params.token);
 
 	const api = getApi();
 
 	let dining = $state<GuestDiningResponse | null>(null);
+	// Token mentah yang dipakai ke BE. Bisa berbeda dari routeParam bila
+	// pengunjung datang dari halaman kode (param = btoa(kode)).
+	let apiToken = $state<string | null>(null);
+	let displayCode = $state<string | null>(null);
 	let loading = $state(true);
 	let error: string | null = $state(null);
 	let polling = $state(false);
@@ -88,11 +91,31 @@
 		}
 	}
 
+	function safeDecodeCode(value: string): string | null {
+		try {
+			const decoded = atob(value);
+			return /^\d{6}$/.test(decoded) ? decoded : null;
+		} catch {
+			return null;
+		}
+	}
+
 	async function loadDining() {
 		try {
 			polling = true;
 			error = null;
-			dining = await api.guestDinings.getByToken(guestToken);
+			try {
+				// Jalur utama: link QR/staf membawa guestToken mentah.
+				dining = await api.guestDinings.getByToken(routeParam);
+				apiToken = routeParam;
+				displayCode = safeDecodeCode(routeParam);
+			} catch {
+				// Fallback: param = btoa(kode 6 digit) dari halaman /guest.
+				const code = atob(routeParam);
+				dining = await api.guestDinings.getByCode(code);
+				apiToken = null;
+				displayCode = code;
+			}
 		} catch (e) {
 			error = toAppError(e).message;
 			toastStore.show(error, 'error');
@@ -127,6 +150,10 @@
 
 	async function addToCart() {
 		if (!selectedMenu) return;
+		if (!apiToken) {
+			toastStore.show('Untuk memesan, pindai QR di meja (kode angka hanya untuk melihat).', 'warning');
+			return;
+		}
 		try {
 			const items: GuestOrderRequest['items'] = [{
 				menuId: selectedMenu.id,
@@ -136,7 +163,7 @@
 					.map(([, v]) => ({ modifierOptionId: Number(v) }))
 			}];
 
-			await api.guestDinings.addOrder(guestToken, {
+			await api.guestDinings.addOrder(apiToken, {
 				items,
 				customerName: '',
 				notes: ''
@@ -175,7 +202,7 @@
 	}
 
 	$effect(() => {
-		if (guestToken) {
+		if (routeParam) {
 			void loadDining();
 			void loadMenus();
 			void loadCategories();
@@ -212,9 +239,11 @@
 			<div class="flex items-center justify-between mb-4">
 				<div class="flex items-center gap-3">
 					<span class="font-mono text-muted font-bold">Meja {dining.tableNumber}</span>
-					<span class="rounded-pill bg-subtle text-muted px-2 py-0.5 text-xs font-mono">
-						Kode: {guestCode}
-					</span>
+					{#if displayCode}
+						<span class="rounded-pill bg-subtle text-muted px-2 py-0.5 text-xs font-mono">
+							Kode: {displayCode}
+						</span>
+					{/if}
 				</div>
 				<span class="rounded-pill px-2 py-0.5 text-xs font-bold {invoiceStatusColor(dining.invoiceStatus)}">
 					{invoiceStatusLabel(dining.invoiceStatus)}
@@ -227,6 +256,11 @@
 			<span class="text-sm text-muted font-bold {polling ? 'text-sky' : ''}">
 				{polling ? '● Sedang memperbarui...' : '✓ Diperbarui'}
 			</span>
+			{#if !apiToken}
+				<div class="bg-subtle border-line border-rice rounded-card mt-3 px-4 py-3 text-sm text-muted font-bold">
+					Mode lihat saja — pindai QR di meja untuk memesan dari perangkat ini.
+				</div>
+			{/if}
 
 			<hr class="border-line border-rice my-4" />
 
