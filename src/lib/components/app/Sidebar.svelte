@@ -1,133 +1,147 @@
 <script lang="ts">
-	import { session } from '$lib/stores';
+	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { session } from '$lib/stores';
+	import { canAny, isNavActive, NAV_SECTIONS, type NavItem } from '$lib/config/nav';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ThemeSwitcher from '$lib/components/theme/ThemeSwitcher.svelte';
 
-	const can = (authority: string): boolean =>
-		session.hasAuthority(authority) || session.hasAuthority(authority.replace(/\.\w+$/, '.*'));
+	let mobileOpen = $state(false);
 
-	const navItems = $derived([
-		{
-			label: 'Dashboard',
-			href: '/reports',
-			icon: 'dashboard',
-			show: can('report.read')
-		},
-		{
-			label: 'Pesanan',
-			href: '/orders',
-			icon: 'receipt',
-			show: can('order.read')
-		},
-		{
-			label: 'Meja & Sesi',
-			href: '/dinings',
-			icon: 'table',
-			show: can('dining.read')
-		},
-		{
-			label: 'Pembayaran',
-			href: '/payments',
-			icon: 'wallet',
-			show: can('payment.create')
-		},
-		{
-			label: 'Tagihan',
-			href: '/invoices',
-			icon: 'receipt',
-			show: can('invoice.read')
-		},
-		{
-			label: 'Dapur',
-			href: '/kitchen',
-			icon: 'kitchen',
-			show: can('kitchen.read')
-		},
-		{
-			label: 'Lantai',
-			href: '/floor',
-			icon: 'floor',
-			show: can('table.read') || can('dining.read')
-		},
-		{
-			label: 'Akun Saya',
-			href: '/my',
-			icon: 'user',
-			show: session.isLoggedIn
-		},
-		{
-			label: 'Menu',
-			href: '/menus',
-			icon: 'coffee',
-			show: can('menu.read')
-		},
-		{
-			label: 'Katalog',
-			href: '/catalog',
-			icon: 'bread',
-			show: can('menu-category.read') || can('menu-modifier.read')
-		},
-		{
-			label: 'Kelola Meja',
-			href: '/tables',
-			icon: 'table',
-			show: can('table.create') || can('table.update') || can('table.delete')
-		},
-		{
-			label: 'Pelanggan',
-			href: '/customers',
-			icon: 'user',
-			show: can('customer.read')
-		},
-		{
-			label: 'Pengguna',
-			href: '/users',
-			icon: 'user',
-			show: session.isLoggedIn && (can('role.read') || can('role.create'))
-		}
-	]);
+	const sections = $derived(
+		NAV_SECTIONS.map((section) => ({
+			...section,
+			items: section.items.filter((item) =>
+				canAny(session.user?.authorities ?? [], item.authorities)
+			)
+		})).filter((section) => section.items.length > 0)
+	);
 
-	const visibleNavItems = $derived(navItems.filter((item) => item.show));
+	const activeItem = $derived(
+		sections.flatMap((section) => section.items).find((item) => isNavActive(item, page.url.pathname))
+	);
+
+	const roleLabel = $derived(
+		session.user?.roles.length ? session.user.roles.join(' · ') : 'Member'
+	);
 
 	function handleLogout() {
-		void session.logout();
-		void goto('/login');
+		void session.logout().then(() => goto('/login'));
 	}
 
-	function handleNav(href: string) {
-		void goto(href);
+	function go(item: NavItem) {
+		mobileOpen = false;
+		if (isNavActive(item, page.url.pathname)) return;
+		void goto(item.href);
 	}
+
+	$effect(() => {
+		// Tutup drawer tiap kali rute berubah (mis. back/forward browser).
+		if (page.url.pathname) mobileOpen = false;
+	});
 </script>
 
-<nav class="bg-shell border-r border-line border-rice flex flex-col w-64 flex-shrink-0">
-	<div class="p-4 border-b border-line border-rice">
-		<h1 class="font-display text-ink text-xl font-extrabold">Hysteria Cafe</h1>
-		{#if session.user}
-			<p class="text-muted text-xs mt-1">{session.user.email}</p>
-		{/if}
-	</div>
+{#snippet navContent()}
+	<div class="flex flex-1 flex-col overflow-hidden">
+		<div class="border-line border-rice flex-1 overflow-y-auto py-3">
+			{#each sections as section (section.label)}
+				<p class="text-faint px-4 pt-3 pb-1 font-mono text-[0.65rem] font-bold tracking-[0.18em] uppercase">
+					{section.label}
+				</p>
+				{#each section.items as item (item.href)}
+					{@const active = activeItem?.href === item.href}
+					<button
+						type="button"
+						onclick={() => go(item)}
+						aria-current={active ? 'page' : undefined}
+						class="rounded-btn border-rice rice-press mx-2 mb-0.5 flex w-[calc(100%-1rem)] items-center gap-3 px-3 py-2 text-left font-bold
+							{active
+							? 'bg-accent text-inverted border-line shadow-ricesm'
+							: 'text-muted hover:text-ink hover:bg-card-hover border-transparent'}"
+					>
+						<Icon name={item.icon} class="h-5 w-5 flex-none" />
+						<span class="min-w-0 flex-1">
+							<span class="block truncate text-sm">{item.label}</span>
+							{#if item.description}
+								<span class="block truncate text-[0.7rem] font-normal opacity-70">{item.description}</span>
+							{/if}
+						</span>
+					</button>
+				{/each}
+			{/each}
+		</div>
 
-	<div class="flex-1 overflow-y-auto py-2">
-		{#each visibleNavItems as item (item.href)}
+		<div class="border-line border-rice flex flex-col gap-2 p-3">
+			<ThemeSwitcher compact />
+			{#if session.user}
+				<div class="bg-subtle border-line border-rice rounded-btn px-3 py-2">
+					<p class="text-ink truncate font-mono text-xs font-bold">{session.user.email || '—'}</p>
+					<p class="text-muted truncate text-[0.7rem] font-bold">{roleLabel}</p>
+				</div>
+			{/if}
 			<button
 				type="button"
-				onclick={() => handleNav(item.href)}
-				class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-ink hover:bg-card-hover rounded-none font-bold transition-colors"
+				onclick={handleLogout}
+				class="rounded-btn border-rice rice-press text-danger hover:bg-danger/10 flex w-full items-center gap-3 px-3 py-2 text-left font-bold"
 			>
-				<Icon name={item.icon} class="h-5 w-5 text-muted" />
-				<span class="text-sm">{item.label}</span>
+				<Icon name="logout" class="h-5 w-5 flex-none" />
+				<span class="text-sm">Keluar</span>
 			</button>
-		{/each}
+		</div>
 	</div>
+{/snippet}
 
-	<div class="p-4 border-t border-line border-rice">
+<!-- Top bar (mobile & tablet) -->
+<header class="bg-shell border-line border-rice flex items-center gap-2 px-3 py-2 lg:hidden">
+	<button
+		type="button"
+		onclick={() => (mobileOpen = !mobileOpen)}
+		aria-label="Buka menu navigasi"
+		aria-expanded={mobileOpen}
+		class="bg-subtle text-ink border-line border-rice rounded-btn rice-press shadow-ricesm p-2"
+	>
+		<Icon name={mobileOpen ? 'close' : 'menu'} class="h-5 w-5" />
+	</button>
+	<h1 class="font-display text-ink min-w-0 flex-1 truncate text-base font-extrabold">Hysteria Cafe</h1>
+	<ThemeSwitcher compact />
+</header>
+
+<!-- Sidebar (desktop) -->
+<nav
+	class="bg-shell border-line border-rice hidden w-64 flex-shrink-0 flex-col lg:flex"
+	aria-label="Navigasi utama"
+>
+	<div class="border-line border-rice p-4">
+		<h1 class="font-display text-ink text-xl font-extrabold">Hysteria Cafe</h1>
+		<p class="text-muted mt-1 font-mono text-xs">
+			{activeItem?.label ?? 'Panel Staf'}
+		</p>
+	</div>
+	{@render navContent()}
+</nav>
+
+<!-- Drawer (mobile & tablet) -->
+{#if mobileOpen}
+	<div class="fixed inset-0 z-40 lg:hidden">
 		<button
 			type="button"
-			onclick={handleLogout}
-			class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-danger hover:bg-danger/10 rounded-btn rice-press font-bold"
-		>
-			<Icon name="logout" class="h-5 w-5" />
-			<span class="text-sm">Keluar</span>
-		</button>
+			aria-label="Tutup menu navigasi"
+			onclick={() => (mobileOpen = false)}
+			class="bg-overlay absolute inset-0 h-full w-full cursor-default"
+		></button>
+		<div class="bg-shell border-line border-rice shadow-ricelg absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col">
+			<div class="border-line border-rice flex items-center justify-between p-4">
+				<h1 class="font-display text-ink text-lg font-extrabold">Hysteria Cafe</h1>
+				<button
+					type="button"
+					onclick={() => (mobileOpen = false)}
+					aria-label="Tutup menu"
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press p-1.5"
+				>
+					<Icon name="close" class="h-4 w-4" />
+				</button>
+			</div>
+			{@render navContent()}
+		</div>
 	</div>
-</nav>
+{/if}

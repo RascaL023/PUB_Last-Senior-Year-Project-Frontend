@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
+	import { page as routePage } from '$app/state';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { PaymentResponse, PaymentStatus, PaymentProvider } from '$lib/domain/payment';
+	import type { InvoiceResponse } from '$lib/domain/invoice';
 	import type { PagedResult } from '$lib/core/types/pagination';
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import { goto } from '$app/navigation';
 
 	const api = getApi();
 
@@ -19,7 +23,9 @@
 	let keyword = $state('');
 	let statusFilter = $state<PaymentStatus | ''>('');
 	let providerFilter = $state<PaymentProvider | ''>('');
+	let invoiceFilterId = $state<number | null>(null);
 
+	let openInvoices = $state<InvoiceResponse[]>([]);
 	let formInvoiceId = $state<number | null>(null);
 	let formProvider = $state<PaymentProvider>('INTERNAL');
 	let formAmount = $state<number | null>(null);
@@ -31,6 +37,9 @@
 	let totalPages = $state(1);
 	let totalItems = $state(0);
 
+	let selected = $state<PaymentResponse | null>(null);
+	let detailLoading = $state(false);
+
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 	const canRead = $derived(session.hasAuthority('payment.read') || session.hasAuthority('payment.*'));
@@ -40,6 +49,27 @@
 	const canUpdate = $derived(
 		session.hasAuthority('payment.update') || session.hasAuthority('payment.*')
 	);
+	const canReadInvoices = $derived(
+		session.hasAuthority('invoice.read') || session.hasAuthority('invoice.*')
+	);
+
+	const selectedInvoice = $derived(
+		openInvoices.find((invoice) => invoice.id === formInvoiceId) ?? null
+	);
+	const invoiceIdFromUrl = $derived(Number(routePage.url.searchParams.get('invoiceId')) || null);
+
+	async function loadOpenInvoices() {
+		if (!canReadInvoices) return;
+		try {
+			const [open, partial] = await Promise.all([
+				api.invoices.list({ status: 'OPEN', size: 50, sort: 'createdAt,desc' }),
+				api.invoices.list({ status: 'PARTIALLY_PAID', size: 50, sort: 'createdAt,desc' })
+			]);
+			openInvoices = [...open.items, ...partial.items];
+		} catch {
+			openInvoices = [];
+		}
+	}
 
 	function statusColor(status: PaymentStatus): string {
 		switch (status) {
@@ -79,11 +109,12 @@
 		error = null;
 		try {
 			const result: PagedResult<PaymentResponse> = await api.payments.list({
-				page,
-				size: 20,
-				keyword: keyword.trim() || undefined,
-				status: statusFilter || undefined,
-				paymentProvider: providerFilter || undefined,
+					page,
+					size: 20,
+					keyword: keyword.trim() || undefined,
+					invoiceId: invoiceFilterId ?? undefined,
+					status: statusFilter || undefined,
+					paymentProvider: providerFilter || undefined,
 				sort: 'createdAt,desc'
 			});
 			payments = result.items;
@@ -115,6 +146,7 @@
 			formAmount = null;
 			formDetail = '';
 			await loadPayments(0);
+			await loadOpenInvoices();
 		} catch (e) {
 			toastStore.show(toAppError(e).message, 'error');
 		} finally {
@@ -135,7 +167,24 @@
 		}
 	}
 
+	async function openDetail(id: number) {
+		detailLoading = true;
+		try {
+			selected = await api.payments.getById(id);
+		} catch (e) {
+			toastStore.show(toAppError(e).message, 'error');
+		} finally {
+			detailLoading = false;
+		}
+	}
+
 	function handleSearch() {
+		void loadPayments(0);
+	}
+
+	function clearInvoiceFilter() {
+		invoiceFilterId = null;
+		formInvoiceId = null;
 		void loadPayments(0);
 	}
 
@@ -146,8 +195,13 @@
 	}
 
 	$effect(() => {
+		if (invoiceIdFromUrl && invoiceIdFromUrl !== invoiceFilterId) {
+			invoiceFilterId = invoiceIdFromUrl;
+			formInvoiceId = invoiceIdFromUrl;
+		}
 		if (canRead) {
 			void loadPayments(0);
+			void loadOpenInvoices();
 			if (!pollInterval) {
 				pollInterval = setInterval(() => {
 					if (payments.some((p) => p.status === 'PENDING')) void loadPayments(currentPage - 1);
@@ -192,14 +246,28 @@
 					<h3 class="font-display text-ink mb-3 text-base font-bold">Buat Pembayaran</h3>
 					<div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
 						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
-							ID Invoice
-							<input
-								type="number"
-								min="1"
-								bind:value={formInvoiceId}
-								placeholder="cth. 12"
-								class="bg-subtle text-ink border-line border-rice rounded-btn w-full px-3 py-2 text-sm sm:w-32"
-							/>
+							Tagihan
+							{#if canReadInvoices}
+								<select
+									bind:value={formInvoiceId}
+									class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold"
+								>
+									<option value={null}>Pilih tagihan belum lunas...</option>
+									{#each openInvoices as invoice (invoice.id)}
+										<option value={invoice.id}>
+											{invoice.invoiceNumber} · sisa {formatPrice(invoice.remainingAmount)}
+										</option>
+									{/each}
+								</select>
+							{:else}
+								<input
+									type="number"
+									min="1"
+									bind:value={formInvoiceId}
+									placeholder="ID tagihan"
+									class="bg-subtle text-ink border-line border-rice rounded-btn w-full px-3 py-2 text-sm sm:w-32"
+								/>
+							{/if}
 						</label>
 						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
 							Metode
@@ -217,7 +285,9 @@
 								type="number"
 								min="1"
 								bind:value={formAmount}
-								placeholder="cth. 50000"
+								placeholder={selectedInvoice
+									? String(selectedInvoice.remainingAmount)
+									: 'cth. 50000'}
 								class="bg-subtle text-ink border-line border-rice rounded-btn w-full px-3 py-2 text-sm sm:w-40"
 							/>
 						</label>
@@ -241,12 +311,21 @@
 						</button>
 					</div>
 					{#if createdUrl}
-						<p class="mt-3 text-sm">
-							<span class="text-muted font-bold">Link bayar: </span>
-							<a href={createdUrl} target="_blank" rel="noopener" class="text-accent font-bold hover:underline">
-								{createdUrl}
-							</a>
-						</p>
+						<div class="bg-subtle border-line border-rice rounded-btn mt-3 flex flex-wrap items-center gap-2 px-3 py-2">
+							<p class="text-sm">
+								<span class="text-muted font-bold">Link bayar: </span>
+								<a href={createdUrl} target="_blank" rel="noopener" class="text-accent font-bold hover:underline">
+									{createdUrl}
+								</a>
+							</p>
+							<button
+								type="button"
+								onclick={() => (createdUrl = null)}
+								class="text-muted hover:text-ink ml-auto text-xs font-bold"
+							>
+								Tutup
+							</button>
+						</div>
 					{/if}
 				</div>
 			{/if}
@@ -258,6 +337,14 @@
 					bind:value={keyword}
 					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 					class="bg-subtle text-ink border-line border-rice rounded-btn w-full flex-1 px-3 py-2 text-sm font-bold"
+				/>
+				<input
+					type="number"
+					min="1"
+					placeholder="ID invoice"
+					bind:value={invoiceFilterId}
+					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+					class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold sm:w-32"
 				/>
 				<select
 					bind:value={statusFilter}
@@ -279,6 +366,22 @@
 					<option value="INTERNAL">Tunai</option>
 					<option value="XENDIT">Xendit</option>
 				</select>
+				<button
+					type="button"
+					onclick={handleSearch}
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+				>
+					Cari
+				</button>
+				{#if invoiceFilterId}
+					<button
+						type="button"
+						onclick={clearInvoiceFilter}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+					>
+						Lepas invoice
+					</button>
+				{/if}
 			</div>
 
 			{#if loading}
@@ -304,7 +407,17 @@
 						<tbody>
 							{#each payments as payment (payment.id)}
 								<tr class="border-line border-rice border-b">
-									<td class="text-ink px-4 py-3 font-mono font-bold">{payment.invoiceNumber}</td>
+									<td class="px-4 py-3">
+										<button
+											type="button"
+											onclick={() => void openDetail(payment.id)}
+											title="Lihat detail pembayaran (termasuk applied/excess amount)"
+											class="text-ink font-mono font-bold hover:underline"
+										>
+											{payment.invoiceNumber}
+										</button>
+										<span class="text-faint ml-2 font-mono text-[0.65rem]">#{payment.invoiceId}</span>
+									</td>
 									<td class="text-muted px-4 py-3">{payment.paymentProvider}</td>
 									<td class="text-ink px-4 py-3 font-mono">{formatPrice(payment.amount)}</td>
 									<td class="px-4 py-3">
@@ -374,3 +487,77 @@
 		{/if}
 	</div>
 </section>
+
+<Modal
+	open={selected !== null}
+	title={selected ? `Pembayaran #${selected.id} · ${selected.invoiceNumber}` : 'Detail Pembayaran'}
+	subtitle="Settlement diteruskan ke invoice via event — order tidak punya status bayar."
+	onClose={() => (selected = null)}
+>
+	{#if detailLoading || !selected}
+		<p class="text-muted text-sm font-bold">Memuat detail...</p>
+	{:else}
+		<div class="mb-3 flex items-center gap-2">
+			<span class="rounded-pill px-2 py-0.5 font-mono text-xs font-bold {statusColor(selected.status)}">
+				{selected.status}
+			</span>
+			<span class="text-muted font-mono text-xs">{selected.paymentProvider}</span>
+		</div>
+		<dl class="grid grid-cols-2 gap-2 text-sm">
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Nominal</dt>
+				<dd class="text-ink font-mono font-bold">{formatPrice(selected.amount)}</dd>
+			</div>
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Diterapkan ke tagihan</dt>
+				<dd class="text-ink font-mono font-bold">{formatPrice(selected.appliedAmount)}</dd>
+			</div>
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Kelebihan (excess)</dt>
+				<dd class="text-ink font-mono font-bold">{formatPrice(selected.excessAmount)}</dd>
+			</div>
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Dibayar pada</dt>
+				<dd class="text-ink font-mono text-xs font-bold">{formatDateTime(selected.paidAt)}</dd>
+			</div>
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Channel</dt>
+				<dd class="text-ink font-mono text-xs">{selected.paymentChannel ?? '—'}</dd>
+			</div>
+			<div>
+				<dt class="text-muted font-mono text-xs font-bold">Metode</dt>
+				<dd class="text-ink font-mono text-xs">{selected.paymentMethodName ?? selected.paymentDetail ?? '—'}</dd>
+			</div>
+			<div class="col-span-2">
+				<dt class="text-muted font-mono text-xs font-bold">External ID</dt>
+				<dd class="text-ink font-mono text-xs">{selected.externalId ?? '—'}</dd>
+			</div>
+		</dl>
+		{#if selected.invoiceUrl && selected.status === 'PENDING'}
+			<a
+				href={selected.invoiceUrl}
+				target="_blank"
+				rel="noopener"
+				class="bg-accent text-inverted rounded-btn rice-press mt-4 block px-4 py-2 text-center text-sm font-bold"
+			>
+				Buka link bayar Xendit
+			</a>
+		{/if}
+		<div class="border-linemuted mt-4 flex justify-end gap-2 border-t pt-4">
+			<button
+				type="button"
+				onclick={() => goto(`/invoices`)}
+				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+			>
+				Daftar tagihan
+			</button>
+			<button
+				type="button"
+				onclick={() => (selected = null)}
+				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+			>
+				Tutup
+			</button>
+		</div>
+	{/if}
+</Modal>

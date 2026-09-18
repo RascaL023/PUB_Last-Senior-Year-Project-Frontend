@@ -161,9 +161,24 @@
 	<div class="bg-app text-ink min-h-screen pb-20">
 		<div class="mx-auto max-w-4xl px-3 py-6 sm:px-6">
 			<p class="text-accent mb-2 font-mono text-xs font-bold tracking-[0.2em] uppercase">— Sesi Saya</p>
-			<h2 class="font-display text-ink text-2xl font-extrabold">
-				Meja {dining.tableNumber} · {formatPrice(dining.totalPrice)}
-			</h2>
+			<div class="flex flex-wrap items-center gap-2">
+				<h2 class="font-display text-ink text-2xl font-extrabold">
+					Meja {dining.tableNumber} · {formatPrice(dining.totalPrice)}
+				</h2>
+				<span
+					class="rounded-pill px-2 py-0.5 font-mono text-xs font-bold {dining.invoiceStatus === 'PAID'
+						? 'bg-leaf text-inverted'
+						: dining.invoiceStatus === 'PARTIALLY_PAID'
+							? 'bg-sky text-inverted'
+							: dining.invoiceStatus === 'VOID'
+								? 'bg-danger text-inverted'
+								: dining.invoiceStatus === 'OPEN'
+									? 'bg-honey text-ink'
+									: 'bg-subtle text-muted'}"
+				>
+					{dining.invoiceStatus ?? 'Belum ada tagihan'}
+				</span>
+			</div>
 			<p class="text-muted mt-1 font-mono text-xs">Pesanan terhubung ke profil membermu.</p>
 
 			<hr class="border-line border-rice my-4" />
@@ -271,6 +286,17 @@
 											<span>{item.itemName} × {item.quantity}</span>
 											<span class="font-mono">{formatPrice(item.subtotal)}</span>
 										</div>
+										{#if item.modifiers && item.modifiers.length > 0}
+											<div class="flex flex-wrap gap-1">
+												{#each item.modifiers as mod}
+													<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.5 font-mono text-xs">
+														{mod.modifierName}{mod.additionalPrice > 0
+															? ` (+${formatPrice(mod.additionalPrice)})`
+															: ''}
+													</span>
+												{/each}
+											</div>
+										{/if}
 									{/each}
 								</div>
 							{/if}

@@ -34,6 +34,7 @@
 
 	let employee = $state<EmployeeResponse | null>(null);
 	let employeeError = $state<string | null>(null);
+	let employeeMissing = $state(false);
 	let editingEmployee = $state(false);
 	let employeeName = $state('');
 	let employeePhone = $state('');
@@ -42,7 +43,11 @@
 	// CUSTOMER_BASE tidak punya authority; staf selalu punya minimal satu.
 	// Surface member (/my/**) mewajibkan profil customer → staf selalu 403,
 	// jadi untuk staf jangan panggil API sama sekali.
-	const isStaff = $derived((session.user?.authorities.length ?? 0) > 0);
+	const isStaff = $derived(session.isStaff);
+	const landing = $derived(session.resolveLanding());
+	const canManageEmployees = $derived(
+		session.hasAuthority('employee.read') || session.hasAuthority('employee.*')
+	);
 	const staffRoleLabel = $derived(
 		employee?.roleName ?? (session.user?.roles ?? []).join(', ') ?? ''
 	);
@@ -62,9 +67,15 @@
 	async function loadEmployee() {
 		try {
 			employeeError = null;
+			employeeMissing = false;
 			employee = await api.employees.getMe();
 		} catch (e) {
-			employeeError = toAppError(e).message;
+			const appErr = toAppError(e);
+			// 404 = akun staf ini belum punya baris karyawan (mis. akun uji).
+			employeeMissing = appErr.status === 404;
+			employeeError = employeeMissing
+				? 'Profil karyawan belum terdaftar untuk akun ini.'
+				: appErr.message;
 		}
 	}
 
@@ -245,7 +256,18 @@
 				{/if}
 			</div>
 			{#if employeeError}
-				<p class="text-muted mt-2 text-sm">{employeeError}</p>
+				<div class="bg-subtle border-line border-rice rounded-btn mt-3 px-3 py-2">
+					<p class="text-muted text-sm font-bold">{employeeError}</p>
+					{#if employeeMissing && canManageEmployees}
+						<button
+							type="button"
+							onclick={() => goto('/employees')}
+							class="text-accent mt-1 text-xs font-bold hover:underline"
+						>
+							Buat data karyawan →
+						</button>
+					{/if}
+				</div>
 			{:else if employee && editingEmployee}
 				<div class="mt-3 flex flex-col gap-2">
 					<label class="flex flex-col gap-1 text-xs font-bold text-ink">
@@ -301,13 +323,24 @@
 				Sesi dan riwayat di halaman ini khusus member — gunakan halaman kerjamu.
 			</p>
 			<div class="mt-2 flex flex-wrap gap-2">
-				<button
-					type="button"
-					onclick={() => goto(session.resolveLanding())}
-					class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
-				>
-					Ke Halaman Kerja
-				</button>
+				{#if landing !== '/my'}
+					<button
+						type="button"
+						onclick={() => goto(landing)}
+						class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+					>
+						Ke Halaman Kerja
+					</button>
+				{/if}
+				{#if canManageEmployees}
+					<button
+						type="button"
+						onclick={() => goto('/employees')}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+					>
+						Data Karyawan
+					</button>
+				{/if}
 				<button
 					type="button"
 					onclick={() => {
@@ -487,6 +520,7 @@
 							<th class="text-left py-2 text-muted font-mono font-bold">Status</th>
 							<th class="text-right py-2 text-muted font-mono font-bold">Total</th>
 							<th class="text-right py-2 text-muted font-mono font-bold">Waktu</th>
+							<th class="text-right py-2 text-muted font-mono font-bold">Lacak</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -500,6 +534,20 @@
 								</td>
 								<td class="py-2 text-ink text-right font-mono">{formatPrice(order.totalPrice)}</td>
 								<td class="py-2 text-muted text-right font-mono text-xs">{formatDate(order.createdAt)}</td>
+								<td class="py-2 text-right">
+									{#if order.trackToken}
+										<a
+											href={`/guest/track/${order.trackToken}`}
+											target="_blank"
+											rel="noopener"
+											class="text-accent text-xs font-bold hover:underline"
+										>
+											Lacak
+										</a>
+									{:else}
+										<span class="text-faint text-xs">—</span>
+									{/if}
+								</td>
 							</tr>
 						{/each}
 					</tbody>

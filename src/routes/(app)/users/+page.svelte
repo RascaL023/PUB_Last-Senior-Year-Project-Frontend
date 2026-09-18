@@ -36,13 +36,26 @@
 
 	const can = (authority: string): boolean =>
 		session.hasAuthority(authority) || session.hasAuthority(authority.replace(/\.\w+$/, '.*'));
-	// Manajemen user membutuhkan login (tanpa authority khusus di BE).
-	const canUsers = $derived(session.isLoggedIn);
+	// BE memakai @PreAuthorize user.*/role.*/authority.* untuk ketiga tab di bawah.
+	const canUsers = $derived(can('user.read'));
+	const canUserWrite = $derived(
+		can('user.create') || can('user.update') || can('user.delete')
+	);
 	const canRoleWrite =
 		$derived(can('role.create') || can('role.update') || can('role.delete'));
 	const canRoleRead = $derived(can('role.read'));
 	const canAuthRead = $derived(can('authority.read'));
 	const canAuthDelete = $derived(can('authority.delete'));
+	const canAnyTab = $derived(canUsers || canRoleRead || canAuthRead);
+	const tabs = $derived(
+		(
+			[
+				{ id: 'users', label: 'Pengguna', show: canUsers },
+				{ id: 'roles', label: 'Peran', show: canRoleRead },
+				{ id: 'authorities', label: 'Otoritas', show: canAuthRead }
+			] as { id: 'users' | 'roles' | 'authorities'; label: string; show: boolean }[]
+		).filter((item) => item.show)
+	);
 
 	async function loadUsers() {
 		if (!canUsers) return;
@@ -195,6 +208,11 @@
 	}
 
 	$effect(() => {
+		// Pindahkan tab aktif ke tab pertama yang boleh dibuka user.
+		if (tabs.length > 0 && !tabs.some((item) => item.id === tab)) {
+			tab = tabs[0].id;
+			return;
+		}
 		if (tab === 'users') void loadUsers();
 		else if (tab === 'roles') {
 			void loadRoles();
@@ -212,10 +230,11 @@
 		<h2 class="font-display text-ink mb-4 text-2xl font-extrabold tracking-tight">Pengguna & Peran</h2>
 
 		<div class="mb-4 flex flex-wrap gap-2">
-			{#each [{ id: 'users', label: 'Pengguna' }, { id: 'roles', label: 'Peran' }, { id: 'authorities', label: 'Otoritas' }] as t}
+			{#each tabs as t (t.id)}
 				<button
 					type="button"
-					onclick={() => (tab = t.id as typeof tab)}
+					onclick={() => (tab = t.id)}
+					aria-pressed={tab === t.id}
 					class="rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold
 						{tab === t.id ? 'bg-accent text-inverted' : 'bg-subtle text-muted hover:text-ink'}"
 				>
@@ -224,7 +243,15 @@
 			{/each}
 		</div>
 
-		{#if tab === 'users'}
+		{#if !canAnyTab}
+			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
+				<Icon name="user" class="text-muted mx-auto mb-2 h-8 w-8" />
+				<h3 class="font-display text-ink mb-2 text-lg font-extrabold">Akses Dibatasi</h3>
+				<p class="text-muted text-sm font-bold">
+					Anda tidak memiliki izin mengelola pengguna, peran, atau otoritas.
+				</p>
+			</div>
+		{:else if tab === 'users'}
 			{#if usersError}
 				<div class="mb-4">
 					<ErrorState
@@ -235,6 +262,7 @@
 					/>
 				</div>
 			{/if}
+			{#if canUserWrite}
 			<div class="bg-shell border-line border-rice rounded-card mb-4 p-4">
 				<h3 class="font-display text-ink mb-3 text-base font-bold">
 					{userEditingId !== null ? 'Ubah Pengguna' : 'Pengguna Baru'}
@@ -295,6 +323,7 @@
 					{/if}
 				</div>
 			</div>
+			{/if}
 			{#if usersLoading}
 				<div class="text-muted py-12 text-center">Memuat pengguna...</div>
 			{:else}

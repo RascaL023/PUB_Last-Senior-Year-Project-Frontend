@@ -31,7 +31,9 @@
 
 	let selectedMenu: MenuResponse | null = $state(null);
 	let selectedQuantity = $state(1);
-	let selectedModifiers: Record<number, number> = $state({});
+	let selectedModifiers: Record<number, number[]> = $state({});
+	let customerName = $state('');
+	let orderNotes = $state('');
 	let showMenuModal = $state(false);
 
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -155,24 +157,31 @@
 			toastStore.show('Untuk memesan, pindai QR di meja (kode angka hanya untuk melihat).', 'warning');
 			return;
 		}
+		const missing = missingRequiredModifiers(selectedMenu);
+		if (missing.length > 0) {
+			toastStore.show(`Modifier wajib belum dipilih: ${missing.join(', ')}`, 'warning');
+			return;
+		}
 		try {
 			const items: GuestOrderRequest['items'] = [{
 				menuId: selectedMenu.id,
 				quantity: selectedQuantity,
-				modifiers: Object.entries(selectedModifiers)
-					.filter(([, v]) => v !== undefined)
-					.map(([, v]) => ({ modifierOptionId: Number(v) }))
+				modifiers: Object.values(selectedModifiers)
+					.flat()
+					.map((modifierOptionId) => ({ modifierOptionId }))
 			}];
 
 			await api.guestDinings.addOrder(apiToken, {
 				items,
-				customerName: '',
-				notes: ''
+				customerName: customerName.trim() || undefined,
+				notes: orderNotes.trim() || undefined
 			});
 			toastStore.show('Pesanan ditambahkan!', 'success');
 			selectedMenu = null;
 			selectedQuantity = 1;
 			selectedModifiers = {};
+			customerName = '';
+			orderNotes = '';
 			showMenuModal = false;
 			await loadDining();
 		} catch (e) {
@@ -180,9 +189,41 @@
 		}
 	}
 
+	function toggleModifier(
+		modTypeId: number,
+		optionId: number,
+		maxSelection: number,
+		checked: boolean
+	) {
+		const current = selectedModifiers[modTypeId] ?? [];
+		if (!checked) {
+			selectedModifiers = {
+				...selectedModifiers,
+				[modTypeId]: current.filter((id) => id !== optionId)
+			};
+			return;
+		}
+		// maxSelection = 1 → pilihan saling eksklusif.
+		selectedModifiers = {
+			...selectedModifiers,
+			[modTypeId]: maxSelection === 1 ? [optionId] : [...current, optionId]
+		};
+	}
+
+	function missingRequiredModifiers(menu: MenuResponse): string[] {
+		return (menu.modifierTypes ?? [])
+			.filter((type) => {
+				const picked = selectedModifiers[type.id]?.length ?? 0;
+				return picked < type.minSelection;
+			})
+			.map((type) => type.name);
+	}
+
 	function startPolling() {
 		if (pollInterval) return;
 		pollInterval = setInterval(() => {
+			// Tab tersembunyi tidak perlu ikut polling.
+			if (typeof document !== 'undefined' && document.hidden) return;
 			void loadDining();
 		}, 7000);
 	}
@@ -202,6 +243,16 @@
 		});
 	}
 
+	function copySessionLink() {
+		const url = typeof window === 'undefined' ? routeParam : window.location.href;
+		try {
+			void navigator.clipboard.writeText(url);
+			toastStore.show('Link sesi disalin — bagikan ke teman semeja.', 'success');
+		} catch {
+			toastStore.show(url, 'info');
+		}
+	}
+
 	$effect(() => {
 		if (routeParam) {
 			void loadDining();
@@ -213,6 +264,10 @@
 
 	onDestroy(() => stopPolling());
 </script>
+
+<svelte:head>
+	<title>Pesanan Saya — Hysteria Cafe</title>
+</svelte:head>
 
 {#if loading}
 	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
@@ -257,9 +312,28 @@
 			<span class="text-sm text-muted font-bold {polling ? 'text-sky' : ''}">
 				{polling ? '● Sedang memperbarui...' : '✓ Diperbarui'}
 			</span>
-			{#if !apiToken}
+			{#if dining.status === 'CLOSED'}
 				<div class="bg-subtle border-line border-rice rounded-card mt-3 px-4 py-3 text-sm text-muted font-bold">
-					Mode lihat saja — pindai QR di meja untuk memesan dari perangkat ini.
+					Sesi ini sudah selesai — kamu masih bisa melihat riwayat di bawah, tapi tidak bisa menambah
+					pesanan. Untuk pesanan baru, pindai QR di meja yang aktif.
+				</div>
+			{:else if !apiToken}
+				<div class="bg-subtle border-line border-rice rounded-card mt-3 px-4 py-3 text-sm text-muted font-bold">
+					Mode lihat saja — kode angka hanya untuk melihat. Pindai QR di meja untuk memesan dari
+					perangkat ini.
+				</div>
+			{:else}
+				<div class="mt-3 flex flex-wrap gap-2">
+					<button
+						type="button"
+						onclick={() => copySessionLink()}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-xs font-bold"
+					>
+						Salin link sesi ini
+					</button>
+					<span class="text-faint self-center text-xs">
+						Untuk bayar: tunjukkan nomor order ke kasir — status tagihan ikut terpantau di atas.
+					</span>
 				</div>
 			{/if}
 
@@ -276,7 +350,7 @@
 						{#each menus as menu}
 							<button
 								type="button"
-								onclick={() => { selectedMenu = menu; selectedQuantity = 1; selectedModifiers = {}; showMenuModal = true; }}
+								onclick={() => { selectedMenu = menu; selectedQuantity = 1; selectedModifiers = {}; orderNotes = ''; showMenuModal = true; }}
 								class="bg-shell border-line border-rice rounded-card p-3 text-left rice-lift"
 							>
 								<div class="aspect-square bg-subtle rounded-card mb-2 flex items-center justify-center overflow-hidden">
@@ -324,7 +398,7 @@
 												{#if item.modifiers && item.modifiers.length > 0}
 													<div class="flex flex-wrap gap-1 mt-0.5">
 														{#each item.modifiers as mod}
-															<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.25 text-xs font-mono">
+															<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.5 text-xs font-mono">
 																{mod.modifierName}
 																{#if mod.additionalPrice > 0}
 																	(+{formatPrice(mod.additionalPrice)})
@@ -371,6 +445,27 @@
 			</div>
 
 			<div class="p-4">
+				<div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+						Nama (opsional)
+						<input
+							type="text"
+							bind:value={customerName}
+							maxlength="50"
+							class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm"
+						/>
+					</label>
+					<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+						Catatan (opsional)
+						<input
+							type="text"
+							bind:value={orderNotes}
+							maxlength="255"
+							placeholder="cth. tanpa gula"
+							class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm"
+						/>
+					</label>
+				</div>
 				<div class="mb-4">
 					<span class="block text-sm font-bold text-ink mb-1">Jumlah</span>
 					<div class="flex items-center gap-2">
@@ -408,15 +503,9 @@
 											<input
 												type="checkbox"
 												id={`mod-${modType.id}-${option.id}`}
-												checked={selectedModifiers[modType.id] === option.id}
-												onchange={(e) => {
-													if (e.currentTarget.checked) {
-														selectedModifiers[modType.id] = option.id;
-													} else {
-														delete selectedModifiers[modType.id];
-													}
-												}}
-												class="rounded border-line text-accent"
+												checked={(selectedModifiers[modType.id] ?? []).includes(option.id)}
+												onchange={(e) => toggleModifier(modType.id, option.id, modType.maxSelection, e.currentTarget.checked)}
+												class="border-line rounded"
 											/>
 											<label for={`mod-${modType.id}-${option.id}`} class="text-sm text-ink flex-1">
 												{option.name}
@@ -437,7 +526,8 @@
 				<button
 					type="button"
 					onclick={addToCart}
-					class="bg-accent text-inverted border-rice rounded-btn rice-press w-full py-2 text-sm font-bold"
+					disabled={!apiToken || dining?.status === 'CLOSED'}
+					class="bg-accent text-inverted border-rice rounded-btn rice-press w-full py-2 text-sm font-bold disabled:opacity-50"
 				>
 					Tambah ke Pesanan
 				</button>

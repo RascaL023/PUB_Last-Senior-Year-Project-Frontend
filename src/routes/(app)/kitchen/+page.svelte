@@ -11,19 +11,21 @@
 	const api = getApi();
 
 	let tickets = $state<KitchenTicket[]>([]);
-	let loading = $state(false);
+	let loading = $state(true);
 	let error = $state<string | null>(null);
-	let polling = $state(false);
+	let syncing = $state(false);
+	let busyId = $state<number | null>(null);
 	let pollInterval: ReturnType<typeof setInterval> | null = null;
 
+	const canRead = $derived(session.hasAuthority('kitchen.read'));
 	const canPrepare = $derived(
 		session.hasAuthority('order.mark.preparing') || session.hasAuthority('order.*')
 	);
 	const canReady = $derived(session.hasAuthority('order.mark.ready') || session.hasAuthority('order.*'));
 
 	async function loadTickets() {
-		if (!session.hasAuthority('kitchen.read')) return;
-		loading = true;
+		if (!canRead) return;
+		syncing = true;
 		error = null;
 		try {
 			const query: KitchenListQuery = { status: 'CONFIRMED,PREPARING' };
@@ -32,31 +34,32 @@
 			error = toAppError(e).message;
 		} finally {
 			loading = false;
+			syncing = false;
 		}
 	}
 
 	async function handlePrepare(orderId: number): Promise<void> {
-		if (!canPrepare) return;
-		polling = true;
+		if (!canPrepare || busyId === orderId) return;
+		busyId = orderId;
 		try {
 			await api.orders.transition(orderId, 'prepare');
 		} catch (e) {
 			error = toAppError(e).message;
 		} finally {
-			polling = false;
+			busyId = null;
 			await loadTickets();
 		}
 	}
 
 	async function handleReady(orderId: number): Promise<void> {
-		if (!canReady) return;
-		polling = true;
+		if (!canReady || busyId === orderId) return;
+		busyId = orderId;
 		try {
 			await api.orders.transition(orderId, 'ready');
 		} catch (e) {
 			error = toAppError(e).message;
 		} finally {
-			polling = false;
+			busyId = null;
 			await loadTickets();
 		}
 	}
@@ -93,6 +96,8 @@
 	function startPolling() {
 		if (pollInterval) return;
 		pollInterval = setInterval(() => {
+			// Tab tersembunyi tidak perlu ikut polling.
+			if (typeof document !== 'undefined' && document.hidden) return;
 			void loadTickets();
 		}, 8000);
 	}
@@ -105,7 +110,7 @@
 	}
 
 	$effect(() => {
-		if (session.status === 'ready' && session.hasAuthority('kitchen.read')) {
+		if (session.status === 'ready' && canRead) {
 			void loadTickets();
 			startPolling();
 		}
@@ -121,9 +126,16 @@
 <div class="p-6 bg-app min-h-screen">
 	<div class="flex justify-between items-center mb-6">
 		<h2 class="font-display text-ink text-2xl font-extrabold">Dapur</h2>
-		<span class="text-muted text-xs font-mono">{polling ? '● Menyinkronisasi...' : 'Siap'}</span>
+		<span class="text-muted text-xs font-mono">{syncing ? '● Menyinkronisasi...' : 'Siap'}</span>
 	</div>
 
+	{#if !canRead}
+		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
+			<Icon name="kitchen" class="text-muted mx-auto mb-2 h-8 w-8" />
+			<h3 class="font-display text-ink mb-2 text-lg font-extrabold">Akses Dibatasi</h3>
+			<p class="text-muted text-sm font-bold">Anda tidak memiliki izin melihat antrean dapur.</p>
+		</div>
+	{:else}
 	{#if error}
 		<div class="mb-4">
 			<ErrorState title="Gagal Memuat Antrean" message={error} onRetry={() => loadTickets()} />
@@ -152,9 +164,7 @@
 						<span class="text-muted text-xs font-mono mb-2 block">Meja {ticket.tableNumber}</span>
 					{/if}
 
-					<span class="text-muted text-xs font-mono block mb-3">
-						{new Date(ticket.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-					</span>
+					<span class="text-muted text-xs font-mono block mb-3">{formatTime(ticket.createdAt)}</span>
 
 					{#if ticket.notes}
 						<div class="bg-subtle rounded-btn px-2 py-1 mb-2">
@@ -172,7 +182,7 @@
 								{#if item.modifiers && item.modifiers.length > 0}
 									<div class="flex flex-wrap gap-1 mt-1">
 										{#each item.modifiers as mod}
-											<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.25 text-xs font-mono">
+											<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.5 text-xs font-mono">
 												{mod.modifierName}
 												{#if mod.additionalPrice > 0}
 													(+{mod.additionalPrice.toLocaleString('id-ID')})
@@ -190,7 +200,7 @@
 							<button
 								type="button"
 								onclick={() => handlePrepare(ticket.orderId)}
-								disabled={polling}
+								disabled={busyId === ticket.orderId}
 								class="bg-ember text-inverted rounded-btn rice-press px-3 py-1.5 text-xs font-bold flex-1"
 							>
 								Mulai
@@ -199,7 +209,7 @@
 							<button
 								type="button"
 								onclick={() => handleReady(ticket.orderId)}
-								disabled={polling}
+								disabled={busyId === ticket.orderId}
 								class="bg-grape text-inverted rounded-btn rice-press px-3 py-1.5 text-xs font-bold flex-1"
 							>
 								Siap
@@ -213,5 +223,6 @@
 				</div>
 			{/each}
 		</div>
+	{/if}
 	{/if}
 </div>

@@ -1,17 +1,21 @@
 export type InvoiceStatus = 'OPEN' | 'PARTIALLY_PAID' | 'PAID' | 'VOID';
 
+/** Sesuai `CreateInvoiceRequest` BE: item wajib punya referensi order item. */
 export interface InvoiceItemRequest {
+	orderItemId: number;
+	orderId: number;
+	menuId: number;
 	description: string;
 	quantity: number;
 	unitPrice: number;
+	amount: number;
 }
 
 export interface InvoiceRequest {
 	diningId?: number;
-	orderId?: number;
 	customerId?: number;
 	customerName?: string;
-	items?: InvoiceItemRequest[];
+	items: InvoiceItemRequest[];
 }
 
 export interface InvoiceItemResponse {

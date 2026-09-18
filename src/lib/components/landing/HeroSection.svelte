@@ -36,6 +36,12 @@
 					Lihat Menu
 				</a>
 				<a
+					href="/guest"
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press rice-ghost px-6 py-3 text-center text-sm font-bold"
+				>
+					Pesan dari Meja / Lacak Takeaway
+				</a>
+				<a
 					href="#about"
 					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press rice-ghost px-6 py-3 text-center text-sm font-bold"
 				>

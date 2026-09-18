@@ -90,6 +90,16 @@
 		});
 	}
 
+	function copyTrackLink() {
+		const url = typeof window === 'undefined' ? trackToken : window.location.href;
+		try {
+			void navigator.clipboard.writeText(url);
+			toastStore.show('Link tracking disalin — bagikan ke pembeli.', 'success');
+		} catch {
+			toastStore.show(url, 'info');
+		}
+	}
+
 	$effect(() => {
 		if (trackToken) {
 			void loadOrder();
@@ -143,6 +153,13 @@
 				{invoiceLabel(order.invoiceStatus)}
 				{polling ? ' · ●' : ''}
 			</p>
+			<button
+				type="button"
+				onclick={copyTrackLink}
+				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press mt-2 px-3 py-1.5 text-xs font-bold"
+			>
+				Salin link tracking
+			</button>
 
 			<hr class="border-line border-rice my-4" />
 

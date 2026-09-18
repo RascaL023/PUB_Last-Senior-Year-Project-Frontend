@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
+	import { goto } from '$app/navigation';
 	import type { DiningTableResponse } from '$lib/domain/table';
+	import type { DiningResponse } from '$lib/domain/dining';
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import { toastStore } from '$lib/stores/toastStore.svelte';
@@ -11,6 +13,7 @@
 	const api = getApi();
 
 	let tables = $state<DiningTableResponse[]>([]);
+	let openDinings = $state<DiningResponse[]>([]);
 	let loading = $state(false);
 	let error: AppError | null = $state(null);
 
@@ -24,6 +27,7 @@
 	const canCreate = $derived(can('table.create'));
 	const canUpdate = $derived(can('table.update'));
 	const canDelete = $derived(can('table.delete'));
+	const canReadDinings = $derived(can('dining.read'));
 
 	async function loadTables() {
 		if (!canRead) return;
@@ -32,11 +36,19 @@
 		try {
 			const result = await api.tables.list({ size: 100, sort: 'tableNumber,asc' });
 			tables = result.items;
+			if (canReadDinings) {
+				const sessions = await api.dinings.list({ status: 'OPEN', size: 100 });
+				openDinings = sessions.items;
+			}
 		} catch (e) {
 			error = toAppError(e);
 		} finally {
 			loading = false;
 		}
+	}
+
+	function sessionOf(tableId: number): DiningResponse | undefined {
+		return openDinings.find((dining) => dining.tableId === tableId);
 	}
 
 	async function handleCreate() {
@@ -174,10 +186,15 @@
 								</div>
 							{:else}
 								<span class="text-ink block font-mono text-lg font-bold">Meja {table.tableNumber}</span>
-								<span class="rounded-pill mt-1 inline-block px-2 py-0.5 font-mono text-xs font-bold
+								<span class="rounded-pill border-rice border-line mt-1 inline-block px-2 py-0.5 font-mono text-xs font-bold
 									{table.status === 'AVAILABLE' ? 'bg-leaf text-inverted' : 'bg-ember text-inverted'}">
 									{table.status === 'AVAILABLE' ? 'Kosong' : 'Terisi'}
 								</span>
+								{#if sessionOf(table.id)}
+									<span class="text-accent mt-1 block font-mono text-[0.65rem] font-bold">
+										sesi #{sessionOf(table.id)?.id}
+									</span>
+								{/if}
 								<div class="mt-2 flex justify-center gap-1">
 									{#if canUpdate}
 										<button
@@ -198,6 +215,15 @@
 											class="bg-danger text-inverted rounded-btn rice-press px-2 py-1 text-xs font-bold"
 										>
 											Hapus
+										</button>
+									{/if}
+									{#if sessionOf(table.id)}
+										<button
+											type="button"
+											onclick={() => goto('/dinings')}
+											class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-2 py-1 text-xs font-bold"
+										>
+											Sesi
 										</button>
 									{/if}
 								</div>

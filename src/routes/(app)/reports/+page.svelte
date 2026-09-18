@@ -15,14 +15,10 @@
 	let fromDate = $state('');
 	let toDate = $state('');
 
-	$effect(() => {
-		if (!session.hasAuthority('report.read') && !session.hasAuthority('report.*')) {
-			return;
-		}
-	});
+	const canRead = $derived(session.hasAuthority('report.read'));
 
 	async function loadSummary() {
-		if (!session.hasAuthority('report.read')) return;
+		if (!canRead) return;
 		loading = true;
 		error = null;
 		try {
@@ -38,7 +34,7 @@
 	}
 
 	$effect(() => {
-		if (session.status === 'ready' && session.hasAuthority('report.read')) {
+		if (session.status === 'ready' && canRead) {
 			void loadSummary();
 		}
 	});
@@ -52,8 +48,15 @@
 	}
 
 	function refreshDateRange() {
-		fromDate = new Date().toISOString().split('T')[0];
-		toDate = fromDate;
+		const today = new Date().toISOString().split('T')[0];
+		fromDate = today;
+		toDate = today;
+		void loadSummary();
+	}
+
+	function clearDateRange() {
+		fromDate = '';
+		toDate = '';
 		void loadSummary();
 	}
 </script>
@@ -62,9 +65,17 @@
 	<title>Dashboard — Hysteria Cafe</title>
 </svelte:head>
 
-<div class="p-6">
-	<div class="flex justify-between items-center mb-6">
-		<h2 class="font-display text-ink text-2xl font-extrabold">Dashboard</h2>
+<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+	<div class="mx-auto max-w-7xl">
+	{#if !canRead}
+		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
+			<Icon name="dashboard" class="text-muted mx-auto mb-2 h-8 w-8" />
+			<h2 class="font-display text-ink mb-2 text-xl font-extrabold">Akses Dibatasi</h2>
+			<p class="text-muted text-sm font-bold">Anda tidak memiliki izin melihat dashboard.</p>
+		</div>
+	{:else}
+	<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+		<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Dashboard</h2>
 		<button
 			type="button"
 			onclick={refreshDateRange}
@@ -80,19 +91,35 @@
 		</div>
 	{/if}
 
-	<div class="mb-4 flex gap-3">
-		<input
-			type="date"
-			bind:value={fromDate}
-			onchange={loadSummary}
-			class="bg-subtle text-ink rounded-btn border-rice border-line px-3 py-2 text-sm font-bold"
-		/>
-		<input
-			type="date"
-			bind:value={toDate}
-			onchange={loadSummary}
-			class="bg-subtle text-ink rounded-btn border-rice border-line px-3 py-2 text-sm font-bold"
-		/>
+	<div class="bg-shell border-line border-rice rounded-card mb-4 flex flex-wrap items-end gap-3 p-4">
+		<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+			Dari tanggal
+			<input
+				type="date"
+				bind:value={fromDate}
+				onchange={loadSummary}
+				class="bg-subtle text-ink rounded-btn border-line border-rice px-3 py-2 text-sm font-bold"
+			/>
+		</label>
+		<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+			Sampai tanggal
+			<input
+				type="date"
+				bind:value={toDate}
+				onchange={loadSummary}
+				class="bg-subtle text-ink rounded-btn border-line border-rice px-3 py-2 text-sm font-bold"
+			/>
+		</label>
+		{#if fromDate || toDate}
+			<button
+				type="button"
+				onclick={clearDateRange}
+				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+			>
+				Reset
+			</button>
+		{/if}
+		<p class="text-faint ml-auto font-mono text-xs">Kosong = seluruh periode</p>
 	</div>
 
 	{#if loading}
@@ -187,7 +214,7 @@
 			{:else}
 				<div class="space-y-3">
 					{#each summary.recentActivity as activity (activity.orderId)}
-						<div class="flex justify-between items-center py-2 border-line border-b border-rice last:border-b-0">
+						<div class="border-line border-rice flex items-center justify-between border-b py-2 last:border-b-0">
 							<div>
 								<span class="font-mono text-ink font-bold">{activity.orderNumber ?? '-'}</span>
 								<span class="text-muted text-xs ml-2">{activity.status ?? '-'} / {activity.billingStatus ?? '-'}</span>
@@ -202,4 +229,6 @@
 			{/if}
 		</div>
 	{/if}
-</div>
+	{/if}
+	</div>
+</section>

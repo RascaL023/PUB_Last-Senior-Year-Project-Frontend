@@ -1,24 +1,50 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
-	import type { OrderResponse, OrderStatus } from '$lib/domain/order';
-	import type { MenuResponse } from '$lib/domain/menu';
-	import type { PagedResult } from '$lib/core/types/pagination';
-	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
+	import { formatWibDateTime } from '$lib/core/time/wib';
 	import { toastStore } from '$lib/stores/toastStore.svelte';
+	import type { AppError } from '$lib/core/http/http-errors';
+	import {
+		orderStatusColor,
+		orderStatusLabel,
+		orderStepsFor,
+		orderStepVariantClass,
+		type OrderResponse,
+		type OrderStatus,
+		type OrderStep
+	} from '$lib/domain/order';
+	import type { MenuResponse } from '$lib/domain/menu';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
-	import { goto } from '$app/navigation';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import MenuPicker, {
+		emptyLine,
+		missingRequiredModifiers,
+		toOrderItems,
+		type MenuPickerLine
+	} from '$lib/components/order/MenuPicker.svelte';
 
 	const api = getApi();
 
+	const STATUS_FILTERS: { value: OrderStatus; label: string }[] = [
+		{ value: 'CREATED', label: 'Menunggu' },
+		{ value: 'CONFIRMED', label: 'Dikonfirmasi' },
+		{ value: 'PREPARING', label: 'Disiapkan' },
+		{ value: 'READY', label: 'Siap' },
+		{ value: 'COMPLETED', label: 'Selesai' },
+		{ value: 'CANCELLED', label: 'Dibatalkan' }
+	];
+
 	let orders = $state<OrderResponse[]>([]);
 	let loading = $state(false);
-	let error = $state<AppError | null>(null);
+	let busyId = $state<number | null>(null);
+	let error: AppError | null = $state(null);
 
-	let statusFilter = $state<OrderStatus | ''>('');
+	let statusFilters = $state<OrderStatus[]>([]);
 	let keyword = $state('');
+	let sortOrder = $state<'createdAt,desc' | 'createdAt,asc'>('createdAt,desc');
 
 	let currentPage = $state(1);
 	let totalPages = $state(1);
@@ -29,101 +55,36 @@
 	let menusLoaded = $state(false);
 	let newCustomer = $state('');
 	let newNotes = $state('');
-	let lines = $state<{ menuId: number | null; quantity: number; options: number[] }[]>([]);
+	let lines = $state<MenuPickerLine[]>([emptyLine()]);
 	let creating = $state(false);
 	let createdNumber = $state<string | null>(null);
 	let createdTrack = $state<string | null>(null);
 
-	const canRead = $derived(session.hasAuthority('order.read') || session.hasAuthority('order.*'));
-	const canUpdate = $derived(session.hasAuthority('order.update') || session.hasAuthority('order.*'));
+	const authorities = $derived(session.user?.authorities ?? []);
+	const canRead = $derived(
+		session.hasAuthority('order.read') || session.hasAuthority('order.*')
+	);
+	const canUpdate = $derived(
+		session.hasAuthority('order.update') || session.hasAuthority('order.*')
+	);
 	const canCreate = $derived(
 		session.hasAuthority('order.create') || session.hasAuthority('order.*')
 	);
+	const canOpenSession = $derived(
+		session.hasAuthority('dining.create') || session.hasAuthority('dining.*')
+	);
 
-	function statusLabel(status: OrderStatus): string {
-		const labels: Record<OrderStatus, string> = {
-			CREATED: 'Menunggu',
-			CONFIRMED: 'Dikonfirmasi',
-			PREPARING: 'Disiapkan',
-			READY: 'Siap',
-			COMPLETED: 'Selesai',
-			CANCELLED: 'Dibatalkan'
-		};
-		return labels[status] ?? status;
-	}
-
-	function statusColor(status: OrderStatus): string {
-		switch (status) {
-			case 'CREATED':
-				return 'bg-honey text-ink';
-			case 'CONFIRMED':
-			case 'PREPARING':
-				return 'bg-sky text-inverted';
-			case 'READY':
-			case 'COMPLETED':
-				return 'bg-leaf text-inverted';
-			case 'CANCELLED':
-				return 'bg-danger text-inverted';
-			default:
-				return 'bg-subtle text-ink';
-		}
-	}
-
-	function transitionLabel(t: string): string {
-		const labels: Record<string, string> = {
-			confirm: 'Konfirmasi',
-			prepare: 'Mulai',
-			ready: 'Siapkan',
-			complete: 'Selesai',
-			cancel: 'Batal'
-		};
-		return labels[t] ?? t;
-	}
-
-	function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-		const allowed: Record<OrderStatus, OrderStatus[]> = {
-			CREATED: ['CONFIRMED', 'CANCELLED'],
-			CONFIRMED: ['PREPARING', 'CANCELLED'],
-			PREPARING: ['READY'],
-			READY: ['COMPLETED'],
-			COMPLETED: [],
-			CANCELLED: []
-		};
-		return allowed[from].includes(to);
-	}
-
-	function availableTransitions(status: OrderStatus): OrderStatus[] {
-		const allowed: Record<OrderStatus, OrderStatus[]> = {
-			CREATED: ['CONFIRMED', 'CANCELLED'],
-			CONFIRMED: ['PREPARING', 'CANCELLED'],
-			PREPARING: ['READY'],
-			READY: ['COMPLETED'],
-			COMPLETED: [],
-			CANCELLED: []
-		};
-		return allowed[status];
-	}
-
-	function transitionAction(from: OrderStatus, to: OrderStatus): string {
-		if (to === 'CONFIRMED') return 'confirm';
-		if (to === 'CANCELLED') return 'cancel';
-		if (to === 'PREPARING') return 'prepare';
-		if (to === 'READY') return 'ready';
-		if (to === 'COMPLETED') return 'complete';
-		return '';
-	}
-
-	async function loadOrders(page = 0) {
+	async function loadOrders(target = 0) {
 		if (!canRead) return;
 		loading = true;
 		error = null;
 		try {
-			const result: PagedResult<OrderResponse> = await api.orders.list({
-				page,
+			const result = await api.orders.list({
+				page: target,
 				size: 20,
-				keyword: keyword || undefined,
-				status: statusFilter || undefined,
-				sort: 'createdAt,desc'
+				keyword: keyword.trim() || undefined,
+				status: statusFilters.length > 0 ? statusFilters : undefined,
+				sort: sortOrder
 			});
 			orders = result.items;
 			currentPage = result.pagination.currentPage;
@@ -136,70 +97,49 @@
 		}
 	}
 
-	async function handleTransition(order: OrderResponse, action: string): Promise<void> {
-		if (!canUpdate) return;
-		if (!confirm(`Yakin ingin ${transitionLabel(action)} order #${order.orderNumber}?`)) return;
+	async function handleTransition(order: OrderResponse, step: OrderStep) {
+		if (!canUpdate || busyId === order.id) return;
+		if (!confirm(`${step.label} order #${order.orderNumber}?`)) return;
+		busyId = order.id;
 		try {
-			await api.orders.transition(order.id, action as any);
+			await api.orders.transition(order.id, step.action);
+			toastStore.show(`Order #${order.orderNumber} ${step.label.toLowerCase()}.`, 'success');
+			await loadOrders(currentPage - 1);
 		} catch (e) {
-			error = toAppError(e);
+			toastStore.show(toAppError(e).message, 'error');
+		} finally {
+			busyId = null;
 		}
-		await loadOrders();
-	}
-
-	function handleSearch() {
-		loadOrders(0);
 	}
 
 	async function openCreate() {
 		showCreate = !showCreate;
 		createdNumber = null;
 		createdTrack = null;
-		if (showCreate && !menusLoaded) {
+		if (!showCreate) return;
+		if (!menusLoaded) {
 			try {
-				const result = await api.menus.list(
-					{ page: 0, size: 100, sort: 'name,asc' },
-					{ auth: false }
-				);
+				const result = await api.menus.list({ page: 0, size: 100, sort: 'name,asc' });
 				menus = result.items;
 				menusLoaded = true;
 			} catch (e) {
 				toastStore.show(toAppError(e).message, 'error');
 			}
 		}
-		if (showCreate && lines.length === 0) {
-			lines = [{ menuId: null, quantity: 1, options: [] }];
-		}
-	}
-
-	function toggleLineOption(lineIdx: number, optionId: number, maxSelection: number) {
-		const line = lines[lineIdx];
-		if (!line) return;
-		if (line.options.includes(optionId)) {
-			line.options = line.options.filter((id) => id !== optionId);
-		} else if (maxSelection === 1) {
-			const menu = menus.find((m) => m.id === line.menuId);
-			const modType = menu?.modifierTypes.find((t) => t.options.some((o) => o.id === optionId));
-			const siblingIds = new Set(modType?.options.map((o) => o.id) ?? []);
-			line.options = [...line.options.filter((id) => !siblingIds.has(id)), optionId];
-		} else {
-			line.options = [...line.options, optionId];
-		}
-	}
-
-	function menuOf(menuId: number | null): MenuResponse | undefined {
-		return menus.find((m) => m.id === menuId);
+		if (lines.length === 0) lines = [emptyLine()];
 	}
 
 	async function submitTakeaway() {
-		const items = lines
-			.filter((l) => l.menuId !== null && l.quantity >= 1)
-			.map((l) => ({
-				menuId: l.menuId as number,
-				quantity: l.quantity,
-				modifiers: l.options.map((modifierOptionId) => ({ modifierOptionId }))
-			}));
-		if (items.length === 0 || creating) return;
+		const items = toOrderItems(lines);
+		if (items.length === 0 || creating) {
+			toastStore.show('Pilih minimal satu menu.', 'warning');
+			return;
+		}
+		const missing = missingRequiredModifiers(lines, menus);
+		if (missing.length > 0) {
+			toastStore.show(`Modifier wajib belum dipilih: ${missing.join(', ')}`, 'warning');
+			return;
+		}
 		creating = true;
 		try {
 			const created = await api.orders.create({
@@ -212,7 +152,7 @@
 			createdNumber = created.orderNumber;
 			createdTrack = created.trackToken;
 			toastStore.show(`Order ${created.orderNumber} dibuat.`, 'success');
-			lines = [{ menuId: null, quantity: 1, options: [] }];
+			lines = [emptyLine()];
 			newCustomer = '';
 			newNotes = '';
 			await loadOrders(0);
@@ -223,39 +163,87 @@
 		}
 	}
 
-	function handlePageChange(delta: number) {
+	function search() {
+		void loadOrders(0);
+	}
+
+	function toggleStatusFilter(value: OrderStatus) {
+		statusFilters = statusFilters.includes(value)
+			? statusFilters.filter((s) => s !== value)
+			: [...statusFilters, value];
+		void loadOrders(0);
+	}
+
+	function resetFilters() {
+		keyword = '';
+		statusFilters = [];
+		void loadOrders(0);
+	}
+
+	function toggleSort() {
+		sortOrder = sortOrder === 'createdAt,desc' ? 'createdAt,asc' : 'createdAt,desc';
+		void loadOrders(0);
+	}
+
+	async function copyTrackLink(trackToken: string, orderNumber: string) {
+		const url = `${window.location.origin}/guest/track/${trackToken}`;
+		try {
+			await navigator.clipboard.writeText(url);
+			toastStore.show(`Link tracking ${orderNumber} disalin.`, 'success');
+		} catch {
+			toastStore.show(url, 'info');
+		}
+	}
+
+	function changePage(delta: number) {
 		const target = currentPage + delta;
 		if (target < 1 || target > totalPages) return;
-		loadOrders(target - 1);
+		void loadOrders(target - 1);
 	}
 
 	$effect(() => {
-		if (canRead) {
-			loadOrders(0);
-		}
+		if (canRead) void loadOrders(0);
 	});
 </script>
+
+<svelte:head>
+	<title>Pesanan — Hysteria Cafe</title>
+</svelte:head>
 
 <section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
 		{#if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-				<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
-				<h2 class="font-display text-ink text-xl font-extrabold mb-2">Akses Dibatasi</h2>
+				<Icon name="receipt" class="text-muted mx-auto mb-2 h-8 w-8" />
+				<h2 class="font-display text-ink mb-2 text-xl font-extrabold">Akses Dibatasi</h2>
 				<p class="text-muted text-sm font-bold">Anda tidak memiliki izin untuk melihat daftar order.</p>
 			</div>
 		{:else}
-			<div class="mb-4 flex items-center justify-between gap-2">
-				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Daftar Order</h2>
-				{#if canCreate}
-					<button
-						type="button"
-						onclick={openCreate}
-						class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
-					>
-						{showCreate ? 'Tutup' : '+ Takeaway'}
-					</button>
-				{/if}
+			<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+				<div>
+					<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Daftar Pesanan</h2>
+					<p class="text-muted mt-1 text-xs font-bold">{totalItems} pesanan</p>
+				</div>
+				<div class="flex flex-wrap gap-2">
+					{#if canOpenSession}
+						<button
+							type="button"
+							onclick={() => goto('/dinings')}
+							class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+						>
+							<Icon name="table" class="h-3.5 w-3.5" /> Sesi meja (dine-in)
+						</button>
+					{/if}
+					{#if canCreate}
+						<button
+							type="button"
+							onclick={openCreate}
+							class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
+						>
+							{showCreate ? 'Tutup' : '+ Takeaway'}
+						</button>
+					{/if}
+				</div>
 			</div>
 
 			{#if error}
@@ -269,222 +257,249 @@
 				</div>
 			{/if}
 
-			{#if showCreate && canCreate}
-				<div class="bg-shell border-line border-rice rounded-card mb-4 p-4">
-					<h3 class="font-display text-ink mb-3 text-base font-bold">Order Takeaway Baru</h3>
-					<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
-							Nama pelanggan
-							<input
-								type="text"
-								bind:value={newCustomer}
-								maxlength="50"
-								placeholder="cth. Budi"
-								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
-							/>
-						</label>
-						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
-							Catatan
-							<input
-								type="text"
-								bind:value={newNotes}
-								maxlength="255"
-								placeholder="cth. Es sedikit"
-								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
-							/>
-						</label>
-					</div>
-					{#each lines as line, i}
-						<div class="border-linemuted mb-3 border-t pt-3">
-							<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
-								<label class="flex flex-1 flex-col gap-1 text-xs font-bold text-ink">
-									Menu
-									<select
-										bind:value={lines[i].menuId}
-										onchange={() => (lines[i].options = [])}
-										class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold"
-									>
-										<option value={null}>Pilih menu...</option>
-										{#each menus as menu (menu.id)}
-											<option value={menu.id}>{menu.name}</option>
-										{/each}
-									</select>
-								</label>
-								<label class="flex flex-col gap-1 text-xs font-bold text-ink">
-									Qty
-									<input
-										type="number"
-										min="1"
-										bind:value={lines[i].quantity}
-										class="bg-subtle text-ink border-line border-rice rounded-btn w-20 px-3 py-2 text-sm"
-									/>
-								</label>
-								{#if lines.length > 1}
-									<button
-										type="button"
-										onclick={() => (lines = lines.filter((_, idx) => idx !== i))}
-										class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
-									>
-										Hapus
-									</button>
-								{/if}
-							</div>
-							{#if menuOf(line.menuId)?.modifierTypes?.length}
-								{#each menuOf(line.menuId)?.modifierTypes ?? [] as modType}
-									<p class="text-ink mt-2 mb-1 text-xs font-bold">{modType.name}</p>
-									<div class="flex flex-wrap gap-1">
-										{#each modType.options as opt}
-											<button
-												type="button"
-												onclick={() => toggleLineOption(i, opt.id, modType.maxSelection)}
-												class="rounded-pill border-rice border-line rice-press px-2 py-1 font-mono text-xs font-bold
-													{line.options.includes(opt.id) ? 'bg-accent text-inverted' : 'bg-subtle text-muted'}"
-											>
-												{opt.name}
-											</button>
-										{/each}
-									</div>
-								{/each}
-							{/if}
-						</div>
-					{/each}
-					<div class="flex flex-wrap items-center gap-2">
-						<button
-							type="button"
-							onclick={() => (lines = [...lines, { menuId: null, quantity: 1, options: [] }])}
-							class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
-						>
-							+ Baris
-						</button>
-						<button
-							type="button"
-							disabled={creating}
-							onclick={submitTakeaway}
-							class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold disabled:opacity-50"
-						>
-							{creating ? 'Menyimpan...' : 'Buat Order'}
-						</button>
-						{#if createdNumber && createdTrack}
-							<a
-								href={`/guest/track/${createdTrack}`}
-								target="_blank"
-								rel="noopener"
-								class="text-accent text-xs font-bold hover:underline"
-							>
-								{createdNumber} → lacak & bagikan
-							</a>
-						{/if}
-					</div>
-				</div>
-			{/if}
-
-			<div class="bg-shell border-line border-rice rounded-card p-4 mb-4 flex flex-col sm:flex-row gap-3">
-				<div class="flex-1">
+			<div class="bg-shell border-line border-rice rounded-card mb-4 flex flex-col gap-3 p-4">
+				<div class="flex flex-col gap-3 sm:flex-row">
 					<input
 						type="text"
-						placeholder="Cari order..."
+						placeholder="Cari nomor order / pelanggan..."
 						bind:value={keyword}
-						oninput={() => {}}
-						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-						class="w-full bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold"
+						onkeydown={(e) => e.key === 'Enter' && search()}
+						class="bg-subtle text-ink border-line border-rice rounded-btn w-full flex-1 px-3 py-2 text-sm font-bold"
 					/>
+					<button
+						type="button"
+						onclick={search}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+					>
+						Cari
+					</button>
+					<button
+						type="button"
+						onclick={toggleSort}
+						title={sortOrder === 'createdAt,desc' ? 'Terbaru dulu — klik untuk tertua dulu' : 'Tertua dulu — klik untuk terbaru dulu'}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+					>
+						{sortOrder === 'createdAt,desc' ? '↓ Terbaru' : '↑ Tertua'}
+					</button>
+					{#if keyword || statusFilters.length > 0}
+						<button
+							type="button"
+							onclick={resetFilters}
+							class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+						>
+							Reset
+						</button>
+					{/if}
 				</div>
-				<select
-					bind:value={statusFilter}
-					onchange={handleSearch}
-					class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold"
-				>
-					<option value="">Semua Status</option>
-					<option value="CREATED">Menunggu</option>
-					<option value="CONFIRMED">Dikonfirmasi</option>
-					<option value="PREPARING">Disiapkan</option>
-					<option value="READY">Siap</option>
-					<option value="COMPLETED">Selesai</option>
-					<option value="CANCELLED">Dibatalkan</option>
-				</select>
+				<div class="flex flex-wrap gap-1.5">
+					{#each STATUS_FILTERS as filter (filter.value)}
+						{@const active = statusFilters.includes(filter.value)}
+						<button
+							type="button"
+							onclick={() => toggleStatusFilter(filter.value)}
+							aria-pressed={active}
+							class="rounded-pill border-rice border-line rice-press px-3 py-1 font-mono text-xs font-bold {active
+								? 'bg-accent text-inverted'
+								: 'bg-subtle text-muted hover:text-ink'}"
+						>
+							{filter.label}
+						</button>
+					{/each}
+				</div>
+				{#if statusFilters.length > 0}
+					<p class="text-faint font-mono text-[0.65rem]">
+						Filter: {statusFilters.join(', ')} · BE menerima multi-nilai & alias (CREATE/CONFIRM/PREPARE/COMPLETE/CANCEL).
+					</p>
+				{/if}
 			</div>
 
-			{#if loading}
-				<div class="text-center py-12 text-muted">Memuat order...</div>
+			{#if loading && orders.length === 0}
+				<div class="text-muted py-12 text-center">Memuat order...</div>
 			{:else if orders.length === 0}
 				<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-					<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
-					<p class="text-muted text-sm font-bold">Belum ada order</p>
+					<Icon name="receipt" class="text-muted mx-auto mb-2 h-8 w-8" />
+					<p class="text-muted text-sm font-bold">Belum ada order yang cocok.</p>
 				</div>
 			{:else}
-				<div class="overflow-x-auto">
+				<div class="bg-shell border-line border-rice rounded-card overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-line border-b border-rice">
-								<th class="text-left py-3 px-4 text-muted font-mono font-bold">No. Order</th>
-								<th class="text-left py-3 px-4 text-muted font-mono font-bold">Tipe</th>
-								<th class="text-left py-3 px-4 text-muted font-mono font-bold">Status</th>
-								<th class="text-left py-3 px-4 text-muted font-mono font-bold">Total</th>
-								<th class="text-left py-3 px-4 text-muted font-mono font-bold">Dibuat</th>
-								<th class="text-right py-3 px-4 text-muted font-mono font-bold">Aksi</th>
+							<tr class="border-line border-rice border-b">
+								<th class="text-muted px-4 py-3 text-left font-mono font-bold">No. Order</th>
+								<th class="text-muted px-4 py-3 text-left font-mono font-bold">Tipe</th>
+								<th class="text-muted px-4 py-3 text-left font-mono font-bold">Status</th>
+								<th class="text-muted px-4 py-3 text-left font-mono font-bold">Total</th>
+								<th class="text-muted px-4 py-3 text-left font-mono font-bold">Dibuat</th>
+								<th class="text-muted px-4 py-3 text-right font-mono font-bold">Aksi</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each orders as order}
-								<tr class="border-line border-b border-rice rice-lift">
-									<td class="py-3 px-4 font-mono font-bold text-ink">{order.orderNumber}</td>
-									<td class="py-3 px-4 text-muted">{order.type === 'DINE_IN' ? 'Dine-in' : 'Takeaway'}</td>
-									<td class="py-3 px-4">
-										<span class="rounded-pill px-2 py-0.5 font-mono text-xs font-bold {statusColor(order.status)}">
-											{statusLabel(order.status)}
-										</span>
-									</td>
-									<td class="py-3 px-4 font-mono text-ink">{order.totalPrice.toLocaleString('id-ID')}</td>
-									<td class="py-3 px-4 text-muted font-mono text-xs">{new Date(order.createdAt).toLocaleString('id-ID')}</td>
-									<td class="py-3 px-4 text-right">
+							{#each orders as order (order.id)}
+								<tr class="border-line border-rice border-b last:border-b-0">
+									<td class="px-4 py-3">
 										<button
 											type="button"
 											onclick={() => goto(`/orders/${order.id}`)}
-											class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold mr-2"
+											class="text-ink font-mono font-bold hover:underline"
 										>
-											Detail
+											{order.orderNumber}
 										</button>
-										{#if canUpdate}
-											{#each availableTransitions(order.status) as targetStatus}
-												{@const action = transitionAction(order.status, targetStatus)}
+									</td>
+									<td class="text-muted px-4 py-3">
+										{order.type === 'DINE_IN' ? 'Dine-in' : 'Takeaway'}
+									</td>
+									<td class="px-4 py-3">
+										<span class="rounded-pill border-rice border-line px-2 py-0.5 font-mono text-xs font-bold {orderStatusColor(order.status)}">
+											{orderStatusLabel(order.status)}
+										</span>
+									</td>
+									<td class="text-ink px-4 py-3 font-mono">
+										{order.totalPrice.toLocaleString('id-ID')}
+									</td>
+									<td class="text-muted px-4 py-3 font-mono text-xs">
+										{formatWibDateTime(order.createdAt)}
+									</td>
+									<td class="px-4 py-3">
+										<div class="flex flex-wrap justify-end gap-1.5">
+											<button
+												type="button"
+												onclick={() => goto(`/orders/${order.id}`)}
+												class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold"
+											>
+												Detail
+											</button>
+											{#if order.trackToken}
+												<a
+													href={`/guest/track/${order.trackToken}`}
+													target="_blank"
+													rel="noopener"
+													title="Buka halaman tracking tamu"
+													class="bg-subtle text-accent rounded-btn border-rice border-line rice-press px-3 py-1.5 text-xs font-bold"
+												>
+													Tracking
+												</a>
 												<button
 													type="button"
-													onclick={() => handleTransition(order, action)}
-													class="text-inverted rounded-btn rice-press px-3 py-1.5 text-xs font-bold ml-1 {targetStatus === 'CANCELLED' ? 'bg-danger' : targetStatus === 'COMPLETED' ? 'bg-leaf' : 'bg-accent'}"
+													onclick={() => copyTrackLink(order.trackToken, order.orderNumber)}
+													title="Salin link tracking untuk dibagikan via WA/struk"
+													class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-xs font-bold"
 												>
-													{transitionLabel(action)}
+													Salin link
 												</button>
-											{/each}
-										{/if}
+											{/if}
+											{#if canUpdate}
+												{#each orderStepsFor(order.status, authorities) as step (step.action)}
+													<button
+														type="button"
+														disabled={busyId === order.id}
+														onclick={() => handleTransition(order, step)}
+														class="rounded-btn rice-press px-3 py-1.5 text-xs font-bold disabled:opacity-50 {orderStepVariantClass(step)}"
+													>
+														{step.label}
+													</button>
+												{/each}
+											{/if}
+										</div>
 									</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
 				</div>
-			{/if}
 
-			{#if totalPages > 1}
-				<div class="flex justify-between items-center mt-4 text-sm">
-					<button
-						type="button"
-						onclick={() => handlePageChange(-1)}
-						disabled={currentPage <= 1 || loading}
-						class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold disabled:opacity-50"
-					>
-						Sebelumnya
-					</button>
-					<span class="text-muted font-mono">Halaman {currentPage} dari {totalPages} ({totalItems} order)</span>
-					<button
-						type="button"
-						onclick={() => handlePageChange(1)}
-						disabled={currentPage >= totalPages || loading}
-						class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold disabled:opacity-50"
-					>
-						Berikutnya
-					</button>
-				</div>
+				{#if totalPages > 1}
+					<div class="mt-4 flex items-center justify-between text-sm">
+						<button
+							type="button"
+							onclick={() => changePage(-1)}
+							disabled={currentPage <= 1 || loading}
+							class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+						>
+							Sebelumnya
+						</button>
+						<span class="text-muted font-mono text-xs">
+							Halaman {currentPage} dari {totalPages} ({totalItems} order)
+						</span>
+						<button
+							type="button"
+							onclick={() => changePage(1)}
+							disabled={currentPage >= totalPages || loading}
+							class="bg-subtle text-ink rounded-btn rice-press px-3 py-1.5 text-xs font-bold disabled:opacity-50"
+						>
+							Berikutnya
+						</button>
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
 </section>
+
+<Modal
+	open={showCreate && canCreate}
+	title="Pesanan Takeaway Baru"
+	subtitle="Tagihan dibuat otomatis oleh server setelah pesanan masuk."
+	onClose={() => (showCreate = false)}
+>
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+		<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+			Nama pelanggan (opsional)
+			<input
+				type="text"
+				bind:value={newCustomer}
+				maxlength="50"
+				placeholder="cth. Budi"
+				class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+			/>
+		</label>
+		<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+			Catatan (opsional)
+			<input
+				type="text"
+				bind:value={newNotes}
+				maxlength="255"
+				placeholder="cth. es sedikit"
+				class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+			/>
+		</label>
+	</div>
+	<div class="mt-4">
+		<MenuPicker bind:lines {menus} />
+	</div>
+	<div class="border-linemuted mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+		{#if createdNumber && createdTrack}
+			<div class="bg-subtle border-line border-rice rounded-btn mr-auto flex flex-wrap items-center gap-2 px-3 py-2">
+				<a
+					href={`/guest/track/${createdTrack}`}
+					target="_blank"
+					rel="noopener"
+					class="text-accent text-xs font-bold hover:underline"
+				>
+					{createdNumber} → lacak &amp; bagikan
+				</a>
+				<button
+					type="button"
+					onclick={() => createdTrack && copyTrackLink(createdTrack, createdNumber ?? '')}
+					class="bg-card text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-2 py-1 text-xs font-bold"
+				>
+					Salin link tracking
+				</button>
+			</div>
+		{/if}
+		<button
+			type="button"
+			onclick={() => (showCreate = false)}
+			class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+		>
+			Tutup
+		</button>
+		<button
+			type="button"
+			disabled={creating}
+			onclick={submitTakeaway}
+			class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold disabled:opacity-50"
+		>
+			{creating ? 'Menyimpan...' : 'Buat Pesanan'}
+		</button>
+	</div>
+</Modal>

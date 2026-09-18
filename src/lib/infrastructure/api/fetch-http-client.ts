@@ -9,13 +9,16 @@ const REFRESHABLE_CODES: (ErrorCode | null)[] = ['ACCESS_TOKEN_EXPIRED', 'INVALI
 
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
 
+function isPublicPath(path: string): boolean {
+	return PUBLIC_PATHS.includes(path) || path.startsWith('/guest');
+}
+
 function redirectToLoginIfNeeded(): void {
 	if (typeof window === 'undefined') return;
 	const path = window.location.pathname;
-	const isPublic = PUBLIC_PATHS.includes(path) || path.startsWith('/guest');
-	if (!isPublic) {
-		window.location.href = '/login';
-	}
+	if (isPublicPath(path)) return;
+	const next = encodeURIComponent(`${path}${window.location.search}`);
+	window.location.href = `/login?redirectTo=${next}`;
 }
 
 interface InternalOptions extends RequestOptions {
@@ -109,6 +112,10 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 					auth: true
 				});
 			}
+			// Token mati tidak bisa di-refresh lagi → buang sisa token lokal.
+			if (errorCode === 'INVALID_REFRESH_TOKEN' || errorCode === 'UNAUTHORIZED') {
+				tokenStore.clear();
+			}
 		}
 		return res;
 	}
@@ -129,7 +136,16 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 			const res = await request('GET', path, undefined, options);
 			await ensureOk(res);
 			const envelope = (await res.json()) as ApiPaged<T>;
-			return { items: envelope.data, pagination: envelope.meta.pagination };
+			const items = envelope.data ?? [];
+			const pagination = envelope.meta?.pagination ?? {
+				currentPage: 1,
+				perPage: items.length,
+				totalItems: items.length,
+				totalPages: 1,
+				hasNextPage: false,
+				hasPrevPage: false
+			};
+			return { items, pagination };
 		},
 		async post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T | null> {
 			const res = await request('POST', path, body, options);

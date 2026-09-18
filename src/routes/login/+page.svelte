@@ -9,8 +9,18 @@
 	let showPassword = $state(false);
 	let busy = $state(false);
 
-	const hasExplicitRedirect = $derived(page.url.searchParams.has('redirectTo'));
-	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/');
+	/** Hanya izinkan path internal — cegah open redirect lewat ?redirectTo=. */
+	function safeRedirect(value: string | null): string | null {
+		if (!value) return null;
+		if (!value.startsWith('/') || value.startsWith('//')) return null;
+		return value;
+	}
+
+	const explicitRedirect = $derived(
+		safeRedirect(page.url.searchParams.get('redirectTo') ?? page.url.searchParams.get('next'))
+	);
+	const hasExplicitRedirect = $derived(explicitRedirect !== null);
+	const redirectTo = $derived(explicitRedirect ?? '/');
 	const registerHref = $derived(
 		redirectTo === '/' && !hasExplicitRedirect
 			? '/register'

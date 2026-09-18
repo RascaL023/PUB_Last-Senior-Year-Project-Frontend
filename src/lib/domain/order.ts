@@ -80,6 +80,79 @@ export interface OrderListQuery {
 
 export type OrderTransition = 'confirm' | 'prepare' | 'ready' | 'complete' | 'cancel';
 
+const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+	CREATED: 'Menunggu',
+	CONFIRMED: 'Dikonfirmasi',
+	PREPARING: 'Disiapkan',
+	READY: 'Siap',
+	COMPLETED: 'Selesai',
+	CANCELLED: 'Dibatalkan'
+};
+
+/** Pemetaan status → token warna (THEME_CONTRACT §3.3). */
+const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
+	CREATED: 'bg-honey text-ink',
+	CONFIRMED: 'bg-sky text-inverted',
+	PREPARING: 'bg-ember text-inverted',
+	READY: 'bg-grape text-inverted',
+	COMPLETED: 'bg-leaf text-inverted',
+	CANCELLED: 'bg-danger text-inverted'
+};
+
+export interface OrderStep {
+	target: OrderStatus;
+	action: OrderTransition;
+	label: string;
+	authority: string;
+	variant: 'accent' | 'leaf' | 'danger';
+}
+
+/** Transisi status yang legal di BE + authority yang dibutuhkan. */
+export const ORDER_STEPS: Record<OrderStatus, OrderStep[]> = {
+	CREATED: [
+		{ target: 'CONFIRMED', action: 'confirm', label: 'Konfirmasi', authority: 'order.update', variant: 'accent' },
+		{ target: 'CANCELLED', action: 'cancel', label: 'Batalkan', authority: 'order.update', variant: 'danger' }
+	],
+	CONFIRMED: [
+		{ target: 'PREPARING', action: 'prepare', label: 'Mulai', authority: 'order.mark.preparing', variant: 'accent' },
+		{ target: 'CANCELLED', action: 'cancel', label: 'Batalkan', authority: 'order.update', variant: 'danger' }
+	],
+	PREPARING: [
+		{ target: 'READY', action: 'ready', label: 'Siap', authority: 'order.mark.ready', variant: 'accent' }
+	],
+	READY: [
+		{ target: 'COMPLETED', action: 'complete', label: 'Selesai', authority: 'order.mark.completed', variant: 'leaf' }
+	],
+	COMPLETED: [],
+	CANCELLED: []
+};
+
+export function orderStatusLabel(status: OrderStatus | string): string {
+	return ORDER_STATUS_LABELS[status as OrderStatus] ?? String(status);
+}
+
+export function orderStatusColor(status: OrderStatus | string): string {
+	return ORDER_STATUS_COLORS[status as OrderStatus] ?? 'bg-subtle text-ink';
+}
+
+export function orderStepVariantClass(step: OrderStep): string {
+	if (step.variant === 'danger') return 'bg-danger text-inverted';
+	if (step.variant === 'leaf') return 'bg-leaf text-inverted';
+	return 'bg-accent text-inverted';
+}
+
+/** Langkah berikutnya yang boleh dijalankan user (authority `order.*` = semua). */
+export function orderStepsFor(status: OrderStatus, authorities: readonly string[]): OrderStep[] {
+	const steps = ORDER_STEPS[status] ?? [];
+	return steps.filter(
+		(step) => authorities.includes(step.authority) || authorities.includes('order.*')
+	);
+}
+
+export function nextOrderStep(status: OrderStatus, authorities: readonly string[]): OrderStep | null {
+	return orderStepsFor(status, authorities).find((step) => step.action !== 'cancel') ?? null;
+}
+
 export interface KitchenTicket {
 	orderId: number;
 	orderNumber: string;

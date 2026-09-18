@@ -5,8 +5,51 @@ import type { ForgotPasswordRequest, ResetPasswordRequest } from '$lib/domain/au
 import { toastStore } from '$lib/stores/toastStore.svelte';
 import { getFriendlyMessage } from '$lib/core/http/error-messages';
 import { AppError } from '$lib/core/http/http-errors';
+import { can, canAny } from '$lib/config/nav';
 
 const api = getApi();
+
+/**
+ * Petunjuk sesi ringan di localStorage (bukan token — token tetap httpOnly
+ * cookie + memori). Fungsinya hanya supaya pengunjung anonim tidak perlu
+ * memanggil `/auths/refresh` (dan menabrak 401 di console) saat membuka
+ * halaman publik, dan supaya email bisa ditampilkan tanpa request tambahan.
+ */
+const SESSION_HINT_KEY = 'cafe-session';
+
+interface SessionHint {
+	email: string;
+}
+
+function readHint(): SessionHint | null {
+	if (typeof localStorage === 'undefined') return null;
+	try {
+		const raw = localStorage.getItem(SESSION_HINT_KEY);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw) as Partial<SessionHint>;
+		return { email: typeof parsed.email === 'string' ? parsed.email : '' };
+	} catch {
+		return null;
+	}
+}
+
+function writeHint(email: string): void {
+	if (typeof localStorage === 'undefined') return;
+	try {
+		localStorage.setItem(SESSION_HINT_KEY, JSON.stringify({ email } satisfies SessionHint));
+	} catch {
+		// localStorage bisa diblokir (private mode) — abaikan.
+	}
+}
+
+function clearHint(): void {
+	if (typeof localStorage === 'undefined') return;
+	try {
+		localStorage.removeItem(SESSION_HINT_KEY);
+	} catch {
+		// abaikan
+	}
+}
 
 export interface SessionUser {
 	id: number;
@@ -26,26 +69,32 @@ class SessionStore {
 		return this.user !== null;
 	}
 
+	/** Staf = punya minimal satu authority (role `customer_base` tidak punya). */
+	get isStaff(): boolean {
+		return (this.user?.authorities.length ?? 0) > 0;
+	}
+
 	hasAuthority(authority: string): boolean {
-		return this.user?.authorities.includes(authority) ?? false;
+		return can(this.user?.authorities ?? [], authority);
+	}
+
+	hasAnyAuthority(authorities: readonly string[]): boolean {
+		return canAny(this.user?.authorities ?? [], authorities);
 	}
 
 	hasRole(role: string): boolean {
 		return this.user?.roles.includes(role) ?? false;
 	}
 
-	/** Landing per role dari authorities (FE_INTEGRATION §2). */
+	/** Landing per role dari authorities — dipakai setelah login & dari /my. */
 	resolveLanding(): string {
 		const authorities = this.user?.authorities ?? [];
-		if (authorities.includes('report.read')) return '/reports';
-		if (authorities.includes('kitchen.read') || authorities.includes('kitchen.*')) return '/kitchen';
-		if (
-			authorities.includes('dining.read') ||
-			authorities.includes('dining.*') ||
-			authorities.includes('order.read') ||
-			authorities.includes('order.*')
-		)
-			return '/floor';
+		if (can(authorities, 'report.read')) return '/reports';
+		if (can(authorities, 'kitchen.read')) return '/kitchen';
+		if (can(authorities, 'dining.read') || can(authorities, 'order.read')) return '/floor';
+		if (can(authorities, 'employee.read')) return '/employees';
+		if (can(authorities, 'table.read')) return '/tables';
+		if (can(authorities, 'customer.read')) return '/customers';
 		return '/my';
 	}
 
@@ -53,6 +102,7 @@ class SessionStore {
 		const claims = decodeAccessToken(accessToken);
 		if (!claims || !claims.sub) {
 			api.tokens.clear();
+			clearHint();
 			this.user = null;
 			this.status = 'guest';
 			return;
@@ -60,6 +110,7 @@ class SessionStore {
 		api.tokens.setAccessToken(accessToken);
 		this.user = { id, email, roles: claims.roles, authorities: claims.authorities };
 		this.status = 'ready';
+		writeHint(email);
 	}
 
 	async login(email: string, password: string): Promise<SessionUser> {
@@ -98,8 +149,7 @@ class SessionStore {
 		} catch {
 			// abaikan — sesi lokal tetap dibersihkan di finally
 		} finally {
-			this.user = null;
-			this.status = 'guest';
+			this.clear();
 		}
 		toastStore.show('Berhasil keluar.', 'success');
 	}
@@ -110,10 +160,17 @@ class SessionStore {
 		} catch {
 			// abaikan — sesi lokal tetap dibersihkan di finally
 		} finally {
-			this.user = null;
-			this.status = 'guest';
+			this.clear();
 		}
 		toastStore.show('Keluar dari semua perangkat.', 'success');
+	}
+
+	/** Bersihkan sesi lokal (dipakai saat refresh token ditolak server). */
+	clear(): void {
+		api.tokens.clear();
+		clearHint();
+		this.user = null;
+		this.status = 'guest';
 	}
 
 	async restore(): Promise<void> {
@@ -128,25 +185,22 @@ class SessionStore {
 	}
 
 	private async doRestore(): Promise<void> {
+		// Tanpa petunjuk sesi = pengunjung anonim: jangan buang request refresh.
+		const hint = readHint();
+		if (!hint) {
+			this.status = 'guest';
+			return;
+		}
 		try {
 			const token = await api.auth.refresh();
 			const claims = decodeAccessToken(token);
 			if (!claims || !claims.sub) {
-				this.user = null;
-				this.status = 'guest';
+				this.clear();
 				return;
 			}
-			let email = '';
-			try {
-				const profile = await api.users.getById(Number(claims.sub));
-				email = profile.email;
-			} catch {
-				email = '';
-			}
-			this.applySession(Number(claims.sub), email, token);
+			this.applySession(Number(claims.sub), hint.email, token);
 		} catch {
-			this.user = null;
-			this.status = 'guest';
+			this.clear();
 		}
 	}
 
