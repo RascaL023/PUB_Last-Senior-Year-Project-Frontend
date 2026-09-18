@@ -9,6 +9,8 @@
 	import { formatWibDateTime } from '$lib/core/time/wib';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import CartDrawer from '$lib/components/cart/CartDrawer.svelte';
+	import { cart } from '$lib/stores';
 
 	let { params }: { params: { token: string } } = $props();
 	const routeParam = $derived(params.token);
@@ -151,7 +153,7 @@
 		}
 	}
 
-	async function addToCart() {
+	async function orderSingleItem() {
 		if (!selectedMenu) return;
 		if (!apiToken) {
 			toastStore.show('Untuk memesan, pindai QR di meja (kode angka hanya untuk melihat).', 'warning');
@@ -235,6 +237,33 @@
 		}
 	}
 
+	let submittingCart = $state(false);
+	const cartSessionActive = $derived(!!apiToken && dining?.status === 'OPEN');
+
+	/** Kirim seluruh isi keranjang landing dalam 1 request pesanan tamu. */
+	async function submitCart(info: { customerName: string; notes: string }) {
+		if (!apiToken || submittingCart || cart.isEmpty) return;
+		const items = cart.toGuestItems();
+		submittingCart = true;
+		try {
+			await api.guestDinings.addOrder(apiToken, {
+				items,
+				customerName: info.customerName.trim() || undefined,
+				notes: info.notes.trim() || undefined
+			});
+			const kinds = items.length;
+			cart.clear();
+			cart.close();
+			toastStore.show(`Keranjang terkirim (${kinds} jenis item)!`, 'success');
+			await loadDining();
+		} catch (e) {
+			toastStore.show(toAppError(e).message, 'error');
+			throw e;
+		} finally {
+			submittingCart = false;
+		}
+	}
+
 	function formatPrice(price: number): string {
 		return price.toLocaleString('id-ID', {
 			style: 'currency',
@@ -304,6 +333,19 @@
 				<span class="rounded-pill px-2 py-0.5 text-xs font-bold {invoiceStatusColor(dining.invoiceStatus)}">
 					{invoiceStatusLabel(dining.invoiceStatus)}
 				</span>
+				<button
+					type="button"
+					onclick={() => cart.open()}
+					aria-label="Buka keranjang, {cart.itemCount} item"
+					class="bg-subtle text-ink rounded-btn border-rice border-line rice-press relative px-3 py-1.5 text-xs font-bold"
+				>
+					Keranjang
+					{#if cart.itemCount > 0}
+						<span class="bg-danger text-inverted rounded-pill px-1.5 py-0.5 font-mono text-[10px] font-bold">
+							{cart.itemCount}
+						</span>
+					{/if}
+				</button>
 			</div>
 
 			<h2 class="font-display text-ink text-2xl font-extrabold mb-2">
@@ -335,6 +377,16 @@
 						Untuk bayar: tunjukkan nomor order ke kasir — status tagihan ikut terpantau di atas.
 					</span>
 				</div>
+			{/if}
+
+			{#if cart.itemCount > 0 && dining.status === 'OPEN' && apiToken}
+				<button
+					type="button"
+					onclick={() => cart.open()}
+					class="bg-accent text-inverted border-rice rounded-btn rice-press mt-3 w-full px-4 py-2.5 text-sm font-bold"
+				>
+					Kirim keranjang ({cart.itemCount} item) ke meja {dining.tableNumber} →
+				</button>
 			{/if}
 
 			<hr class="border-line border-rice my-4" />
@@ -525,7 +577,7 @@
 			<div class="p-4 border-t border-line border-rice bg-subtle rounded-b-card">
 				<button
 					type="button"
-					onclick={addToCart}
+					onclick={orderSingleItem}
 					disabled={!apiToken || dining?.status === 'CLOSED'}
 					class="bg-accent text-inverted border-rice rounded-btn rice-press w-full py-2 text-sm font-bold disabled:opacity-50"
 				>
@@ -535,3 +587,5 @@
 		</div>
 	</div>
 {/if}
+
+<CartDrawer mode="session" sessionActive={cartSessionActive} submitting={submittingCart} onSubmit={submitCart} />

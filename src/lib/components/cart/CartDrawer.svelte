@@ -1,12 +1,42 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
+	import { goto } from '$app/navigation';
 	import { cart, describeSelections } from '$lib/stores';
 	import { motionDuration } from '$lib/actions/reveal';
 	import MenuImage from '$lib/components/landing/MenuImage.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 
+	let {
+		// 'browse' (landing): tombol mengarah ke /guest, keranjang persist di localStorage.
+		// 'session' (halaman sesi tamu): form nama/catatan + kirim via onSubmit.
+		mode = 'browse',
+		sessionActive = false,
+		submitting = false,
+		onSubmit = undefined
+	}: {
+		mode?: 'browse' | 'session';
+		sessionActive?: boolean;
+		submitting?: boolean;
+		onSubmit?: (info: { customerName: string; notes: string }) => Promise<void> | void;
+	} = $props();
+
+	let checkoutName = $state('');
+	let checkoutNotes = $state('');
+
 	function handleKeydown(event: KeyboardEvent): void {
 		if (event.key === 'Escape') cart.close();
+	}
+
+	function goToGuest(): void {
+		cart.close();
+		void goto('/guest');
+	}
+
+	async function handleSubmit(): Promise<void> {
+		if (!onSubmit || submitting || !sessionActive || cart.isEmpty) return;
+		await onSubmit({ customerName: checkoutName, notes: checkoutNotes });
+		checkoutName = '';
+		checkoutNotes = '';
 	}
 </script>
 
@@ -111,7 +141,30 @@
 						Rp {cart.subtotal.toLocaleString('id-ID')}
 					</span>
 				</div>
-				<p class="text-faint mb-3 text-[11px]">Harga final dihitung kasir saat checkout.</p>
+				<p class="text-faint mb-3 text-[11px]">Harga final dihitung server saat pesanan masuk.</p>
+				{#if mode === 'session'}
+					<div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+							Nama (opsional)
+							<input
+								type="text"
+								bind:value={checkoutName}
+								maxlength="50"
+								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm"
+							/>
+						</label>
+						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+							Catatan (opsional)
+							<input
+								type="text"
+								bind:value={checkoutNotes}
+								maxlength="255"
+								placeholder="cth. tanpa gula"
+								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm"
+							/>
+						</label>
+					</div>
+				{/if}
 				<div class="flex gap-2">
 					<button
 						type="button"
@@ -120,14 +173,28 @@
 					>
 						Kosongkan
 					</button>
-					<button
-						type="button"
-						disabled
-						title="Checkout dibuka setelah endpoint tamu BE siap"
-						class="bg-accent text-inverted rounded-btn border-rice border-line flex-1 cursor-not-allowed px-4 py-2.5 text-sm font-bold opacity-60"
-					>
-						Checkout · segera
-					</button>
+					{#if mode === 'session'}
+						<button
+							type="button"
+							disabled={!sessionActive || submitting || cart.isEmpty}
+							title={!sessionActive
+								? 'Pindai QR di meja untuk mengirim (kode angka hanya untuk melihat)'
+								: 'Kirim seluruh isi keranjang dalam 1 pesanan'}
+							onclick={() => void handleSubmit()}
+							class="bg-accent text-inverted rounded-btn border-rice border-line rice-press flex-1 px-4 py-2.5 text-sm font-bold disabled:opacity-50"
+						>
+							{submitting ? 'Mengirim...' : `Kirim ${cart.itemCount} item ke meja`}
+						</button>
+					{:else}
+						<button
+							type="button"
+							onclick={goToGuest}
+							title="Keranjang tersimpan — pindai QR / masukkan kode meja untuk mengirimnya"
+							class="bg-accent text-inverted rounded-btn border-rice border-line rice-press flex-1 px-4 py-2.5 text-sm font-bold"
+						>
+							Pesan ke Meja →
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/if}

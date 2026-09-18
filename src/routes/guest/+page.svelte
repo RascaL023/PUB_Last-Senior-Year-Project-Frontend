@@ -5,6 +5,7 @@
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { cart } from '$lib/stores';
 
 	const api = getApi();
 
@@ -71,6 +72,11 @@
 		</div>
 
 		<div class="bg-shell border-line border-rice rounded-card p-6">
+			{#if cart.itemCount > 0}
+				<div class="bg-subtle border-line border-rice rounded-btn mb-4 px-4 py-3 text-center text-sm text-ink font-bold">
+					Keranjangmu tersimpan ({cart.itemCount} item) — masukkan kode meja di bawah untuk mengirimnya.
+				</div>
+			{/if}
 			<div class="mb-4">
 				<div class="bg-subtle border-line border-rice rounded-btn px-4 py-3 text-center font-mono text-2xl tracking-[0.25em] text-ink min-h-[3rem] flex items-center justify-center">
 					{#if guestCode}

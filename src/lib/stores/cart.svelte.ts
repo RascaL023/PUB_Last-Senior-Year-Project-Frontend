@@ -1,4 +1,5 @@
 import type { MenuResponse } from '$lib/domain/menu';
+import type { GuestOrderItemRequest } from '$lib/domain/guest-dining';
 
 const STORAGE_KEY = 'hysteria-cafe-cart-v1';
 
@@ -135,6 +136,15 @@ class CartStore {
 	remove(key: string): void {
 		this.lines = this.lines.filter((l) => l.key !== key);
 		this.persist();
+	}
+
+	/** Petakan isi keranjang ke payload `POST /guest/dinings/{token}/orders`. */
+	toGuestItems(): GuestOrderItemRequest[] {
+		return this.lines.map((line) => ({
+			menuId: line.menuId,
+			quantity: line.quantity,
+			modifiers: line.selections.map((s) => ({ modifierOptionId: s.modifierOptionId }))
+		}));
 	}
 
 	clear(): void {
