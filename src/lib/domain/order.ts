@@ -67,14 +67,41 @@ export interface OrderResponse {
 	createdAt: string;
 	updatedAt: string;
 	items: OrderItemResponse[];
+	trackToken: string;
 }
 
 export interface OrderListQuery {
 	keyword?: string;
-	status?: OrderStatus;
+	status?: OrderStatus | OrderStatus[];
 	page?: number;
 	size?: number;
 	sort?: string;
 }
 
 export type OrderTransition = 'confirm' | 'prepare' | 'ready' | 'complete' | 'cancel';
+
+export interface KitchenTicket {
+	orderId: number;
+	orderNumber: string;
+	type: OrderType;
+	status: OrderStatus;
+	tableNumber: string | null;
+	notes: string | null;
+	createdAt: string;
+	items: OrderItemResponse[];
+}
+
+export interface KitchenListQuery {
+	status?: string;
+	size?: number;
+}
+
+export interface GuestOrderTrackingResponse {
+	orderNumber: string;
+	type: OrderType;
+	status: OrderStatus;
+	totalPrice: number;
+	createdAt: string;
+	invoiceStatus: string | null;
+	items: OrderItemResponse[];
+}

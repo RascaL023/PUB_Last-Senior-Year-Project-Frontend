@@ -16,4 +16,5 @@ export interface OrderRepository {
 	patch(id: number, payload: OrderPatchRequest): Promise<OrderResponse>;
 	remove(id: number): Promise<void>;
 	transition(id: number, action: OrderTransition): Promise<OrderResponse>;
+	myOrders: (query?: OrderListQuery) => Promise<PagedResult<OrderResponse>>;
 }

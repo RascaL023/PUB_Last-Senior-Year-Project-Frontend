@@ -24,6 +24,7 @@ export function createOrderRepository(http: HttpClient): OrderRepository {
 			http.patch<OrderResponse>(`${BASE}/${id}`, payload) as Promise<OrderResponse>,
 		remove: (id: number) => http.remove(`${BASE}/${id}`),
 		transition: (id: number, action: OrderTransition) =>
-			http.post<OrderResponse>(`${BASE}/${id}/${action}`, undefined) as Promise<OrderResponse>
+			http.post<OrderResponse>(`${BASE}/${id}/${action}`, undefined) as Promise<OrderResponse>,
+		myOrders: (query?: OrderListQuery) => http.getPaged<OrderResponse>(`${API_V1}/my/orders`, { query })
 	};
 }

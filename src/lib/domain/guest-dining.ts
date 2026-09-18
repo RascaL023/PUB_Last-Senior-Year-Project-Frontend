@@ -14,10 +14,28 @@ export interface GuestOrderRequest {
 	items: GuestOrderItemRequest[];
 }
 
+export interface GuestOrderItemModifierResponse {
+	modifierOptionId: number;
+	modifierName: string;
+	additionalPrice: number;
+}
+
+export interface GuestOrderItemResponse {
+	orderItemId: number;
+	menuId: number;
+	itemName: string;
+	unitPrice: number;
+	quantity: number;
+	subtotal: number;
+	modifiers: GuestOrderItemModifierResponse[];
+}
+
 export interface GuestOrderSummary {
+	orderNumber: string;
 	status: string;
 	totalPrice: number;
 	createdAt: string;
+	items: GuestOrderItemResponse[];
 }
 
 export interface GuestDiningResponse {

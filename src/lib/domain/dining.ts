@@ -39,10 +39,23 @@ export interface DiningResponse {
 	createdAt: string;
 	updatedAt: string;
 	closedAt: string | null;
+	guestToken: string;
+	guestCode: string;
 }
 
 export interface DiningListQuery {
+	status?: DiningStatus;
 	page?: number;
 	size?: number;
 	sort?: string;
+}
+
+export interface MyDiningResponse {
+	id: number;
+	tableNumber: string;
+	status: DiningStatus;
+	totalPrice: number;
+	createdAt: string;
+	closedAt: string | null;
+	guestToken: string;
 }

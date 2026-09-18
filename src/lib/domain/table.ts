@@ -20,6 +20,7 @@ export interface DiningTableResponse {
 
 export interface TableListQuery {
 	keyword?: string;
+	status?: TableStatus;
 	page?: number;
 	size?: number;
 	sort?: string;

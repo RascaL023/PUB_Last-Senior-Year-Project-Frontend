@@ -271,14 +271,40 @@
 						{#each dining.orders as order}
 							<div class="bg-shell border-line border-rice rounded-card p-3">
 								<div class="flex justify-between items-center mb-1">
+									<span class="font-mono text-ink font-bold text-sm">{order.orderNumber}</span>
 									<span class="rounded-pill px-2 py-0.5 text-xs font-mono font-bold {orderStatusColor(order.status)}">
 										{orderStatusLabel(order.status)}
 									</span>
-									<span class="text-ink font-bold font-mono">{formatPrice(order.totalPrice)}</span>
 								</div>
-								<p class="text-xs text-muted font-mono">
+								<span class="text-ink font-bold font-mono text-sm">{formatPrice(order.totalPrice)}</span>
+								<p class="text-xs text-muted font-mono mb-2">
 									{new Date(order.createdAt).toLocaleString('id-ID')}
 								</p>
+
+								{#if order.items && order.items.length > 0}
+									<div class="space-y-1.5 mt-2">
+										{#each order.items as item}
+											<div class="text-sm">
+												<div class="flex justify-between text-ink">
+													<span>{item.itemName} × {item.quantity}</span>
+													<span class="font-mono">{formatPrice(item.subtotal)}</span>
+												</div>
+												{#if item.modifiers && item.modifiers.length > 0}
+													<div class="flex flex-wrap gap-1 mt-0.5">
+														{#each item.modifiers as mod}
+															<span class="bg-subtle text-muted rounded-pill px-1.5 py-0.25 text-xs font-mono">
+																{mod.modifierName}
+																{#if mod.additionalPrice > 0}
+																	(+{formatPrice(mod.additionalPrice)})
+																{/if}
+															</span>
+														{/each}
+													</div>
+												{/if}
+											</div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						{/each}
 					</div>
