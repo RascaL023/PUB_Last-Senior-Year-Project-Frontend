@@ -2,6 +2,7 @@
 	import { reveal } from '$lib/actions/reveal';
 </script>
 
+<!-- svelte-ignore -->
 <footer id="kontak" use:reveal class="site-footer border-line bg-shell border-rice w-full scroll-mt-24 border-t px-4 py-10 sm:px-6">
 	<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
 		<div>

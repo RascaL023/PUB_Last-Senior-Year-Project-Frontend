@@ -2,6 +2,9 @@ import { getApi } from '$lib/infrastructure/api/index';
 import { decodeAccessToken } from '$lib/core/auth/jwt';
 import type { CustomerRegisterRequest, CustomerResponse } from '$lib/domain/customer';
 import type { ForgotPasswordRequest, ResetPasswordRequest } from '$lib/domain/auth';
+import { toastStore } from '$lib/stores/toastStore.svelte';
+import { getFriendlyMessage } from '$lib/core/http/error-messages';
+import { AppError } from '$lib/core/http/http-errors';
 
 const api = getApi();
 
@@ -44,21 +47,38 @@ class SessionStore {
 	}
 
 	async login(email: string, password: string): Promise<SessionUser> {
-		const res = await api.auth.login({ email, password });
-		this.applySession(res.id, res.email, res.accessToken);
-		if (!this.user) throw new Error('Token akses tidak valid');
-		return this.user;
+		try {
+			const res = await api.auth.login({ email, password });
+			toastStore.show('Login berhasil! Selamat datang.', 'success');
+			this.applySession(res.id, res.email, res.accessToken);
+			if (!this.user) throw new Error('Token akses tidak valid');
+			return this.user;
+		} catch (e) {
+			const err = e instanceof AppError ? e : new AppError(0, getFriendlyMessage(e));
+			toastStore.show(err.message, 'error');
+			throw e;
+		}
 	}
 
 	async registerCustomer(input: CustomerRegisterRequest): Promise<CustomerResponse> {
-		const created = await api.customers.register(input);
-		await this.login(input.email, input.password);
-		return created;
+		try {
+			const created = await api.customers.register(input);
+			toastStore.show('Akun berhasil dibuat! Silakan masuk.', 'success');
+			await this.login(input.email, input.password);
+			return created;
+		} catch (e) {
+			const err = e instanceof AppError ? e : new AppError(0, getFriendlyMessage(e));
+			toastStore.show(err.message, 'error');
+			throw e;
+		}
 	}
 
 	async logout(): Promise<void> {
 		try {
 			await api.auth.logout();
+			toastStore.show('Berhasil keluar.', 'success');
+		} catch (e) {
+			toastStore.show('Gagal keluar. Coba lagi.', 'error');
 		} finally {
 			this.user = null;
 			this.status = 'guest';
@@ -90,11 +110,25 @@ class SessionStore {
 	}
 
 	async forgotPassword(email: string): Promise<void> {
-		await api.auth.forgotPassword({ email });
+		try {
+			await api.auth.forgotPassword({ email });
+			toastStore.show('Link reset password telah dikirim ke email kamu.', 'success');
+		} catch (e) {
+			const err = e instanceof AppError ? e : new AppError(0, getFriendlyMessage(e));
+			toastStore.show(err.message, 'error');
+			throw e;
+		}
 	}
 
 	async resetPassword(token: string, password: string): Promise<void> {
-		await api.auth.resetPassword({ token, password });
+		try {
+			await api.auth.resetPassword({ token, password });
+			toastStore.show('Password berhasil direset!', 'success');
+		} catch (e) {
+			const err = e instanceof AppError ? e : new AppError(0, getFriendlyMessage(e));
+			toastStore.show(err.message, 'error');
+			throw e;
+		}
 	}
 }
 

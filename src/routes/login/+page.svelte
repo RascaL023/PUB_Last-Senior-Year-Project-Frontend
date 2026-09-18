@@ -2,15 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { session } from '$lib/stores';
-	import { getFriendlyMessage } from '$lib/core/http/error-messages';
 	import { AppError } from '$lib/core/http/http-errors';
 
 	let email = $state('');
 	let password = $state('');
 	let showPassword = $state(false);
 	let busy = $state(false);
-	let formError = $state<string | null>(null);
-	let fieldErrors = $state<Record<string, string>>({});
 
 	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/');
 	const registerHref = $derived(
@@ -22,34 +19,24 @@
 	});
 
 	function validate(): boolean {
-		const errors: Record<string, string> = {};
 		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-			errors.email = 'Masukkan alamat email yang valid.';
+			return false;
 		}
 		if (password.length < 8) {
-			errors.password = 'Kata sandi minimal 8 karakter.';
+			return false;
 		}
-		fieldErrors = errors;
-		return Object.keys(errors).length === 0;
+		return true;
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		formError = null;
 		if (!validate()) return;
 		busy = true;
 		try {
 			await session.login(email.trim(), password);
 			await goto(redirectTo);
-		} catch (e) {
-			if (e instanceof AppError && e.fieldErrors.length > 0) {
-				const mapped: Record<string, string> = {};
-				for (const f of e.fieldErrors) mapped[f.field] = f.message;
-				fieldErrors = mapped;
-				formError = 'Periksa kembali isian formulir.';
-			} else {
-				formError = getFriendlyMessage(e);
-			}
+		} catch {
+			// Toast sudah ditampilkan oleh session.login()
 		} finally {
 			busy = false;
 		}
@@ -69,12 +56,6 @@
 		<h1 id="login-title" class="text-ink font-display text-2xl font-extrabold">Selamat datang kembali</h1>
 		<p class="text-muted mt-1 text-sm">Masuk untuk memesan dan melacak pesananmu.</p>
 
-		{#if formError}
-			<p role="alert" class="bg-danger text-inverted rounded-btn mt-4 px-3 py-2 text-sm font-bold">
-				{formError}
-			</p>
-		{/if}
-
 		<form class="mt-6 flex flex-col gap-4" onsubmit={handleSubmit} novalidate>
 			<div>
 				<label for="login-email" class="text-ink mb-1 block text-xs font-bold">Email</label>
@@ -85,12 +66,8 @@
 					placeholder="nama@email.com"
 					bind:value={email}
 					disabled={busy}
-					aria-invalid={fieldErrors.email ? 'true' : undefined}
 					class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 text-sm outline-none placeholder:text-faint focus:border-accent"
 				/>
-				{#if fieldErrors.email}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.email}</p>
-				{/if}
 			</div>
 
 			<div>
@@ -103,7 +80,6 @@
 						placeholder="Minimal 8 karakter"
 						bind:value={password}
 						disabled={busy}
-						aria-invalid={fieldErrors.password ? 'true' : undefined}
 						class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 pr-16 text-sm outline-none placeholder:text-faint focus:border-accent"
 					/>
 					<button
@@ -115,9 +91,6 @@
 						{showPassword ? 'Sembunyi' : 'Lihat'}
 					</button>
 				</div>
-				{#if fieldErrors.password}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.password}</p>
-				{/if}
 			</div>
 
 			<button
@@ -132,6 +105,11 @@
 		<p class="text-muted mt-6 text-center text-sm">
 			Belum punya akun?
 			<a href={registerHref} class="text-accent font-bold hover:underline">Daftar</a>
+		</p>
+
+		<p class="text-muted mt-2 text-center text-sm">
+			Lupa password?
+			<a href="/forgot-password" class="text-accent font-bold hover:underline">Reset di sini</a>
 		</p>
 
 		{#if import.meta.env.DEV}

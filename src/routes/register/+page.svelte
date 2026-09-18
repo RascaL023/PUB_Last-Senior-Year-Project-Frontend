@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { session } from '$lib/stores';
-	import { getFriendlyMessage } from '$lib/core/http/error-messages';
 	import { AppError } from '$lib/core/http/http-errors';
 
 	let name = $state('');
@@ -12,8 +11,6 @@
 	let confirmPassword = $state('');
 	let showPassword = $state(false);
 	let busy = $state(false);
-	let formError = $state<string | null>(null);
-	let fieldErrors = $state<Record<string, string>>({});
 
 	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/');
 	const loginHref = $derived(
@@ -25,28 +22,16 @@
 	});
 
 	function validate(): boolean {
-		const errors: Record<string, string> = {};
-		if (name.trim().length < 2) {
-			errors.name = 'Masukkan nama lengkapmu.';
-		}
-		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-			errors.email = 'Masukkan alamat email yang valid.';
-		}
-		if (password.length < 8) {
-			errors.password = 'Kata sandi minimal 8 karakter.';
-		} else if (password !== confirmPassword) {
-			errors.confirmPassword = 'Konfirmasi kata sandi tidak sama.';
-		}
-		if (phone.trim().length > 0 && !/^[+0-9][0-9\s-]{5,19}$/.test(phone.trim())) {
-			errors.phone = 'Nomor telepon tidak valid.';
-		}
-		fieldErrors = errors;
-		return Object.keys(errors).length === 0;
+		if (name.trim().length < 2) return false;
+		if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return false;
+		if (password.length < 8) return false;
+		if (password !== confirmPassword) return false;
+		if (phone.trim().length > 0 && !/^[+0-9][0-9\s-]{5,19}$/.test(phone.trim())) return false;
+		return true;
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
-		formError = null;
 		if (!validate()) return;
 		busy = true;
 		try {
@@ -57,18 +42,8 @@
 				...(phone.trim().length > 0 ? { phone: phone.trim() } : {})
 			});
 			await goto(redirectTo);
-		} catch (e) {
-			if (e instanceof AppError && e.status === 409) {
-				fieldErrors = { email: 'Email sudah terdaftar. Silakan masuk.' };
-				formError = 'Email sudah terdaftar. Silakan masuk.';
-			} else if (e instanceof AppError && e.fieldErrors.length > 0) {
-				const mapped: Record<string, string> = {};
-				for (const f of e.fieldErrors) mapped[f.field] = f.message;
-				fieldErrors = mapped;
-				formError = 'Periksa kembali isian formulir.';
-			} else {
-				formError = getFriendlyMessage(e);
-			}
+		} catch {
+			// Toast sudah ditampilkan oleh session.registerCustomer()
 		} finally {
 			busy = false;
 		}
@@ -88,12 +63,6 @@
 		<h1 id="register-title" class="text-ink font-display text-2xl font-extrabold">Buat akun pelanggan</h1>
 		<p class="text-muted mt-1 text-sm">Satu akun untuk memesan dan melacak pesananmu.</p>
 
-		{#if formError}
-			<p role="alert" class="bg-danger text-inverted rounded-btn mt-4 px-3 py-2 text-sm font-bold">
-				{formError}
-			</p>
-		{/if}
-
 		<form class="mt-6 flex flex-col gap-4" onsubmit={handleSubmit} novalidate>
 			<div>
 				<label for="reg-name" class="text-ink mb-1 block text-xs font-bold">Nama lengkap</label>
@@ -106,9 +75,6 @@
 					disabled={busy}
 					class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 text-sm outline-none placeholder:text-faint focus:border-accent"
 				/>
-				{#if fieldErrors.name}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.name}</p>
-				{/if}
 			</div>
 
 			<div>
@@ -122,9 +88,6 @@
 					disabled={busy}
 					class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 text-sm outline-none placeholder:text-faint focus:border-accent"
 				/>
-				{#if fieldErrors.email}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.email}</p>
-				{/if}
 			</div>
 
 			<div>
@@ -140,9 +103,6 @@
 					disabled={busy}
 					class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 text-sm outline-none placeholder:text-faint focus:border-accent"
 				/>
-				{#if fieldErrors.phone}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.phone}</p>
-				{/if}
 			</div>
 
 			<div>
@@ -166,9 +126,6 @@
 						{showPassword ? 'Sembunyi' : 'Lihat'}
 					</button>
 				</div>
-				{#if fieldErrors.password}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.password}</p>
-				{/if}
 			</div>
 
 			<div>
@@ -182,9 +139,6 @@
 					disabled={busy}
 					class="bg-subtle text-ink rounded-btn border-rice border-line w-full px-3 py-2.5 text-sm outline-none placeholder:text-faint focus:border-accent"
 				/>
-				{#if fieldErrors.confirmPassword}
-					<p class="text-danger mt-1 text-xs">{fieldErrors.confirmPassword}</p>
-				{/if}
 			</div>
 
 			<button
