@@ -43,6 +43,11 @@
 		<circle cx="6" cy="18" r="3"/>
 		<circle cx="18" cy="16" r="3"/>
 	</svg>
+{:else if name === 'search'}
+	<svg class={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+		<circle cx="11" cy="11" r="8"/>
+		<line x1="21" y1="21" x2="16.65" y2="16.65"/>
+	</svg>
 {:else if name === 'palette'}
 	<svg class={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 		<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>

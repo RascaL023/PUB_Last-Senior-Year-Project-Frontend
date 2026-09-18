@@ -21,13 +21,16 @@ export class MenuStore {
 	private lastPage = 0;
 	private lastSize = 6;
 
-	async loadMenus(page = 0, size = 6) {
+	async loadMenus(page = 0, size = 6, keyword?: string) {
 		this.loading = true;
 		this.error = null;
 		this.lastPage = page;
 		this.lastSize = size;
 		try {
 			const query: MenuListQuery = { page, size };
+			if (keyword) {
+				query.name = keyword;
+			}
 			if (this.selectedCategoryId !== null) {
 				query.categoryId = this.selectedCategoryId;
 			}
@@ -61,6 +64,11 @@ export class MenuStore {
 	setCategory(categoryId: number | null) {
 		this.selectedCategoryId = categoryId;
 		this.loadMenus(0, 6);
+	}
+
+	async search(keyword: string) {
+		this.selectedCategoryId = null;
+		await this.loadMenus(0, 6, keyword);
 	}
 }
 

@@ -7,6 +7,23 @@
 	import { motionDuration, reveal } from '$lib/actions/reveal';
 	import MenuCard from './MenuCard.svelte';
 	import CategoryFilter from './CategoryFilter.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
+
+	let searchQuery = $state('');
+	let searchTimeout: number | null = null;
+
+	function handleSearch(e: Event) {
+		const value = (e.target as HTMLInputElement).value;
+		searchQuery = value;
+		if (searchTimeout) clearTimeout(searchTimeout);
+		searchTimeout = window.setTimeout(() => {
+			if (value.trim()) {
+				menuStore.search(value.trim());
+			} else {
+				menuStore.setCategory(null);
+			}
+		}, 1500);
+	}
 
 	onMount(() => {
 		menuStore.loadCategories();
@@ -19,6 +36,19 @@
 		<p class="text-accent mb-2 font-mono text-xs font-bold tracking-[0.2em] uppercase">— Menu</p>
 		<h2 class="text-ink font-display mb-2 text-2xl font-extrabold">Menu Unggulan</h2>
 		<p class="text-muted text-sm">Koleksi menu terbaik dari kopi dan makanan kami</p>
+	</div>
+
+	<div use:reveal={{ delay: 100 }} class="mb-4">
+		<div class="relative">
+			<Icon name="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted pointer-events-none" />
+			<input
+				type="search"
+				bind:value={searchQuery}
+				oninput={handleSearch}
+				placeholder="Cari menu..."
+				class="bg-subtle text-ink border-line border-rice rounded-btn pl-10 pr-4 py-2.5 text-sm font-bold w-full max-w-md outline-none focus:border-accent transition-colors"
+			/>
+		</div>
 	</div>
 
 	<div use:reveal={{ delay: 100 }}>
@@ -62,10 +92,10 @@
 		</div>
 	{:else if menuStore.menus.length === 0}
 		<div class="mt-8 text-center" in:fly={{ y: 16, duration: motionDuration(350) }}>
-			<p class="text-muted text-sm">Menu tidak ditemukan untuk filter ini.</p>
+			<p class="text-muted text-sm">{searchQuery ? 'Tidak ada menu untuk "' + searchQuery + '"' : 'Menu tidak ditemukan untuk filter ini.'}</p>
 			<button
 				type="button"
-				onclick={() => menuStore.setCategory(null)}
+				onclick={() => { searchQuery = ''; menuStore.setCategory(null); }}
 				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press mt-3 px-4 py-2 text-xs font-bold"
 			>
 				Tampilkan semua
