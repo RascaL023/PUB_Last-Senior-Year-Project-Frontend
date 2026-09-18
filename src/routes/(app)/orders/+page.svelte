@@ -6,6 +6,7 @@
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { goto } from '$app/navigation';
 
 	const api = getApi();
@@ -152,7 +153,7 @@
 	<div class="mx-auto max-w-7xl">
 		{#if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-				<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+				<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 				<h2 class="font-display text-ink text-xl font-extrabold mb-2">Akses Dibatasi</h2>
 				<p class="text-muted text-sm font-bold">Anda tidak memiliki izin untuk melihat daftar order.</p>
 			</div>
@@ -160,8 +161,13 @@
 			<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight mb-4">Daftar Order</h2>
 
 			{#if error}
-				<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-					{error.message}
+				<div class="mb-4">
+					<ErrorState
+						code={error.status}
+						title="Gagal Memuat Order"
+						message={error.message}
+						onRetry={() => loadOrders(currentPage - 1)}
+					/>
 				</div>
 			{/if}
 
@@ -195,7 +201,7 @@
 				<div class="text-center py-12 text-muted">Memuat order...</div>
 			{:else if orders.length === 0}
 				<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-					<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+					<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 					<p class="text-muted text-sm font-bold">Belum ada order</p>
 				</div>
 			{:else}

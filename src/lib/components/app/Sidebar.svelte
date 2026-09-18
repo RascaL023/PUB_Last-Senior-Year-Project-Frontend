@@ -10,43 +10,43 @@
 		{
 			label: 'Dashboard',
 			href: '/reports',
-			icon: 'coffee',
+			icon: 'dashboard',
 			show: can('report.read')
 		},
 		{
 			label: 'Pesanan',
 			href: '/orders',
-			icon: 'bread',
+			icon: 'receipt',
 			show: can('order.read')
 		},
 		{
 			label: 'Meja & Sesi',
 			href: '/dinings',
-			icon: 'coffee',
+			icon: 'table',
 			show: can('dining.read')
 		},
 		{
 			label: 'Pembayaran',
 			href: '/payments',
-			icon: 'coffee',
+			icon: 'wallet',
 			show: can('payment.create')
 		},
 		{
 			label: 'Dapur',
 			href: '/kitchen',
-			icon: 'coffee',
+			icon: 'kitchen',
 			show: can('kitchen.read')
 		},
 		{
 			label: 'Lantai',
 			href: '/floor',
-			icon: 'coffee',
+			icon: 'floor',
 			show: can('table.read') || can('dining.read')
 		},
 		{
 			label: 'Akun Saya',
 			href: '/my',
-			icon: 'coffee',
+			icon: 'user',
 			show: session.isLoggedIn
 		}
 	]);
@@ -90,7 +90,7 @@
 			onclick={handleLogout}
 			class="w-full flex items-center gap-3 px-4 py-2.5 text-left text-danger hover:bg-danger/10 rounded-btn rice-press font-bold"
 		>
-			<Icon name="close" class="h-5 w-5" />
+			<Icon name="logout" class="h-5 w-5" />
 			<span class="text-sm">Keluar</span>
 		</button>
 	</div>

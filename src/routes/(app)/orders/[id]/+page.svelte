@@ -5,6 +5,7 @@
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { goto } from '$app/navigation';
 
 	let { params }: { params: { id: string } } = $props();
@@ -128,7 +129,7 @@
 {#if !canRead}
 	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<h2 class="font-display text-ink text-xl font-extrabold mb-2">Akses Dibatasi</h2>
 			<p class="text-muted text-sm font-bold">Anda tidak memiliki izin untuk melihat order ini.</p>
 		</div>
@@ -138,7 +139,7 @@
 		{#if loading}
 			<p class="text-muted text-sm font-bold">Memuat...</p>
 		{:else}
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Order tidak ditemukan</p>
 		{/if}
 	</div>
@@ -151,7 +152,7 @@
 					onclick={() => goto('/orders')}
 					class="flex items-center gap-2 text-muted hover:text-ink text-sm font-bold"
 				>
-					<Icon name="close" class="h-4 w-4 rotate-180" />
+					<Icon name="chevron-left" class="h-4 w-4" />
 					Kembali
 				</button>
 			</div>
@@ -161,8 +162,13 @@
 			</h2>
 
 			{#if error}
-				<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-					{error.message}
+				<div class="mb-4">
+					<ErrorState
+						code={error.status}
+						title="Gagal Memuat Order"
+						message={error.message}
+						onRetry={() => loadOrder()}
+					/>
 				</div>
 			{/if}
 

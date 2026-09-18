@@ -143,7 +143,7 @@
 
 	{#if !canRead}
 		<div class="bg-subtle border-line border-rice rounded-card p-6 text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="table" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Anda tidak memiliki akses untuk melihat manajemen meja.</p>
 		</div>
 	{/if}

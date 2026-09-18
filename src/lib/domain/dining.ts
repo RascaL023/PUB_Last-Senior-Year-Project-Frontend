@@ -50,12 +50,16 @@ export interface DiningListQuery {
 	sort?: string;
 }
 
+import type { GuestDiningResponse, GuestOrderSummary } from './guest-dining';
+
 export interface MyDiningResponse {
-	id: number;
+	diningId: number;
+	guestToken: string;
 	tableNumber: string;
 	status: DiningStatus;
 	totalPrice: number;
-	createdAt: string;
-	closedAt: string | null;
-	guestToken: string;
+	invoiceStatus: string | null;
+	orders: GuestOrderSummary[];
 }
+
+export type MyDiningDetailResponse = GuestDiningResponse;

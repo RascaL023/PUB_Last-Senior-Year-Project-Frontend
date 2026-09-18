@@ -7,6 +7,7 @@
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import { toAppError } from '$lib/core/http/error-messages';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	let { params }: { params: { token: string } } = $props();
 	const guestToken = $derived(params.token);
@@ -188,26 +189,22 @@
 {#if loading}
 	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
 		<div class="text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Memuat sesi...</p>
 		</div>
 	</div>
 {:else if error}
-	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
-		<div class="bg-shell border-line border-rice rounded-card p-8 text-center max-w-md">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
-			<h2 class="font-display text-ink text-xl font-extrabold mb-2">Sesi Tidak Ditemukan</h2>
-			<p class="text-muted text-sm font-bold mb-4">{error}</p>
-			<button
-				type="button"
-				onclick={() => {
-					window.location.href = '/guest';
-				}}
-				class="bg-accent text-inverted rounded-btn rice-press px-4 py-2 text-sm font-bold"
-			>
-				Kembali ke Beranda
-			</button>
-		</div>
+	<div class="bg-app text-ink min-h-screen flex items-center justify-center px-4">
+		<ErrorState
+			code={404}
+			title="Sesi Tidak Ditemukan"
+			message={error}
+			icon="receipt"
+			retryLabel="Ke Halaman Tamu"
+			onRetry={() => {
+				window.location.href = '/guest';
+			}}
+		/>
 	</div>
 {:else if dining}
 	<div class="bg-app text-ink min-h-screen pb-20">

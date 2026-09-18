@@ -3,6 +3,7 @@
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { DiningResponse, DiningListQuery } from '$lib/domain/dining';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	const api = getApi();
 
@@ -57,8 +58,8 @@
 	<h2 class="font-display text-ink text-2xl font-extrabold mb-6">Sesi Meja Terbuka</h2>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error}
+		<div class="mb-4">
+			<ErrorState title="Gagal Memuat Sesi" message={error} onRetry={() => loadDinings()} />
 		</div>
 	{/if}
 
@@ -66,7 +67,7 @@
 		<div class="text-center py-12 text-muted">Memuat...</div>
 	{:else if dinings.length === 0}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="table" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Tidak ada sesi terbuka.</p>
 		</div>
 	{:else}

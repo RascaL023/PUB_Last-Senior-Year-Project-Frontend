@@ -5,6 +5,34 @@ export interface CustomerRegisterRequest {
 	phone?: string;
 }
 
+export interface CustomerRequest {
+	name: string;
+	email?: string;
+	phone?: string;
+	notes?: string;
+}
+
+export type CustomerPutRequest = CustomerRequest;
+
+export interface CustomerPatchRequest {
+	name?: string;
+	email?: string;
+	phone?: string;
+	notes?: string;
+}
+
+export interface CustomerClaimRequest {
+	email: string;
+	password: string;
+}
+
+export interface CustomerListQuery {
+	keyword?: string;
+	page?: number;
+	size?: number;
+	sort?: string;
+}
+
 export interface CustomerResponse {
 	id: number;
 	userAuthId: number | null;

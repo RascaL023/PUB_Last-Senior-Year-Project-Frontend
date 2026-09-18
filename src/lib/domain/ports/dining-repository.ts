@@ -1,4 +1,5 @@
 import type { PagedResult } from '$lib/core/types/pagination';
+import type { GuestDiningResponse } from '../guest-dining';
 import type {
 	CreateDiningOrderRequest,
 	DiningListQuery,
@@ -14,6 +15,9 @@ export interface DiningRepository {
 	addOrder(diningId: number, payload: CreateDiningOrderRequest): Promise<DiningResponse>;
 	close(id: number): Promise<DiningResponse>;
 	myDinings: (query?: DiningListQuery) => Promise<MyDiningResponse[] | null>;
-	myDiningByToken: (token: string) => Promise<DiningResponse | null>;
-	myAddOrder: (guestToken: string, payload: CreateDiningOrderRequest) => Promise<DiningResponse>;
+	myDiningByToken: (token: string) => Promise<GuestDiningResponse | null>;
+	myAddOrder: (
+		guestToken: string,
+		payload: CreateDiningOrderRequest
+	) => Promise<GuestDiningResponse>;
 }

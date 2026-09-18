@@ -29,6 +29,9 @@ export interface MenuResponse {
 export interface MenuListQuery {
 	name?: string;
 	categoryId?: number;
+	minPrice?: number;
+	maxPrice?: number;
+	isAvailable?: boolean;
 	page?: number;
 	size?: number;
 	sort?: string;

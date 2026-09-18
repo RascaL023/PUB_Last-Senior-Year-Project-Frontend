@@ -1,24 +1,22 @@
 <script lang="ts">
 	import favicon from '$lib/assets/favicon.svg';
-	import { themeStore } from '$lib/theme/theme.svelte';
 	import { session } from '$lib/stores';
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import AppSidebar from '$lib/components/app/Sidebar.svelte';
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	let { children } = $props();
 
 	let ready = $state(false);
 
-	onMount(() => {
-		themeStore.init();
-		void session.restore().then(() => {
-			ready = true;
-			if (!session.isLoggedIn) {
-				void goto('/login');
-			}
-		});
+	// Root layout sudah memanggil themeStore.init() sekali + session.restore();
+	// di sini cukup gate dari state (tanpa init/restore ganda).
+	$effect(() => {
+		if (session.status === 'unknown') return;
+		ready = true;
+		if (!session.isLoggedIn) {
+			void goto('/login');
+		}
 	});
 </script>
 

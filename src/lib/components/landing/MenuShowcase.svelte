@@ -17,12 +17,25 @@
 		searchQuery = value;
 		if (searchTimeout) clearTimeout(searchTimeout);
 		searchTimeout = window.setTimeout(() => {
-			if (value.trim()) {
-				menuStore.search(value.trim());
-			} else {
-				menuStore.setCategory(null);
-			}
+			menuStore.search(value);
 		}, 1500);
+	}
+
+	function handleFilter(categoryId: number | null) {
+		if (searchTimeout) {
+			clearTimeout(searchTimeout);
+			searchTimeout = null;
+		}
+		menuStore.setCategory(categoryId);
+	}
+
+	function handleReset() {
+		if (searchTimeout) {
+			clearTimeout(searchTimeout);
+			searchTimeout = null;
+		}
+		searchQuery = '';
+		menuStore.reset();
 	}
 
 	onMount(() => {
@@ -52,7 +65,7 @@
 	</div>
 
 	<div use:reveal={{ delay: 100 }}>
-		<CategoryFilter onFilter={(id) => menuStore.setCategory(id)} />
+		<CategoryFilter onFilter={handleFilter} />
 	</div>
 
 	{#if menuStore.loading && menuStore.menus.length === 0}
@@ -95,7 +108,7 @@
 			<p class="text-muted text-sm">{searchQuery ? 'Tidak ada menu untuk "' + searchQuery + '"' : 'Menu tidak ditemukan untuk filter ini.'}</p>
 			<button
 				type="button"
-				onclick={() => { searchQuery = ''; menuStore.setCategory(null); }}
+				onclick={handleReset}
 				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press mt-3 px-4 py-2 text-xs font-bold"
 			>
 				Tampilkan semua

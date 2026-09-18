@@ -1,3 +1,4 @@
+import { API_V1 } from '$lib/config/env';
 import type { HttpClient } from '$lib/core/http/http-client';
 import type {
 	GuestDiningResponse,
@@ -5,7 +6,7 @@ import type {
 } from '$lib/domain/guest-dining';
 import type { GuestDiningRepository } from '$lib/domain/ports/guest-dining-repository';
 
-const BASE = '/api/v1/guest/dinings';
+const BASE = `${API_V1}/guest/dinings`;
 
 export function createGuestDiningRepository(http: HttpClient): GuestDiningRepository {
 	return {

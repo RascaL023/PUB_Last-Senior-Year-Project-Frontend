@@ -1,5 +1,6 @@
 import { API_V1 } from '$lib/config/env';
 import type { HttpClient } from '$lib/core/http/http-client';
+import type { GuestDiningResponse } from '$lib/domain/guest-dining';
 import type {
 	CreateDiningOrderRequest,
 	DiningListQuery,
@@ -25,8 +26,11 @@ export function createDiningRepository(http: HttpClient): DiningRepository {
 		myDinings: (query?: DiningListQuery) =>
 			http.getSingle<MyDiningResponse[]>(`${API_V1}/my/dinings`, { query }),
 		myDiningByToken: (token: string) =>
-			http.getSingle<DiningResponse>(`${API_V1}/my/dinings/${token}`),
+			http.getSingle<GuestDiningResponse>(`${API_V1}/my/dinings/${token}`),
 		myAddOrder: (guestToken: string, payload: CreateDiningOrderRequest) =>
-			http.post<DiningResponse>(`${API_V1}/my/dinings/${guestToken}/orders`, payload) as Promise<DiningResponse>
+			http.post<GuestDiningResponse>(
+				`${API_V1}/my/dinings/${guestToken}/orders`,
+				payload
+			) as Promise<GuestDiningResponse>
 	};
 }

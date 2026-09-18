@@ -4,6 +4,7 @@
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { KitchenTicket, KitchenListQuery, OrderStatus } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	const api = getApi();
 
@@ -122,8 +123,8 @@
 	</div>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error}
+		<div class="mb-4">
+			<ErrorState title="Gagal Memuat Antrean" message={error} onRetry={() => loadTickets()} />
 		</div>
 	{/if}
 
@@ -131,7 +132,7 @@
 		<div class="text-center py-12 text-muted">Memuat antrean...</div>
 	{:else if tickets.length === 0}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="kitchen" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Tidak ada pesanan yang perlu disiapkan saat ini</p>
 		</div>
 	{:else}

@@ -5,6 +5,7 @@
 	import type { DiningResponse, DiningListQuery } from '$lib/domain/dining';
 	import type { OrderResponse, OrderListQuery } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	const api = getApi();
 
@@ -69,8 +70,16 @@
 	<h2 class="font-display text-ink text-2xl font-extrabold mb-6">Lantai Restoran</h2>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error}
+		<div class="mb-4">
+			<ErrorState
+				title="Gagal Memuat Lantai"
+				message={error}
+				onRetry={() => {
+					void loadTables();
+					void loadOpenDinings();
+					void loadReadyOrders();
+				}}
+			/>
 		</div>
 	{/if}
 

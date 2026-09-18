@@ -3,6 +3,7 @@
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { DashboardSummary, DashboardSummaryQuery } from '$lib/domain/report';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
 	const api = getApi();
 
@@ -75,8 +76,8 @@
 	</div>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error}
+		<div class="mb-4">
+			<ErrorState title="Gagal Memuat Dashboard" message={error} onRetry={() => loadSummary()} />
 		</div>
 	{/if}
 
@@ -99,7 +100,7 @@
 		<div class="text-center py-12 text-muted">Memuat dashboard...</div>
 	{:else if !summary}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
-			<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+			<Icon name="dashboard" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<p class="text-muted text-sm font-bold">Tidak dapat memuat data dashboard.</p>
 		</div>
 	{:else}

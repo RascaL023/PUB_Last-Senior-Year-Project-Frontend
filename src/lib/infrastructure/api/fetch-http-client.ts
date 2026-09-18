@@ -7,6 +7,17 @@ import { toQuery, type PagedResult } from '$lib/core/types/pagination';
 
 const REFRESHABLE_CODES: (ErrorCode | null)[] = ['ACCESS_TOKEN_EXPIRED', 'INVALID_ACCESS_TOKEN'];
 
+const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+
+function redirectToLoginIfNeeded(): void {
+	if (typeof window === 'undefined') return;
+	const path = window.location.pathname;
+	const isPublic = PUBLIC_PATHS.includes(path) || path.startsWith('/guest');
+	if (!isPublic) {
+		window.location.href = '/login';
+	}
+}
+
 interface InternalOptions extends RequestOptions {
 	skipRefresh?: boolean;
 }
@@ -23,12 +34,16 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 			});
 			if (!res.ok) {
 				tokenStore.clear();
+				// Hanya sesi yang benar-benar mati (401) yang di-redirect.
+				// Error 5xx / jaringan dibiarkan sebagai error biasa agar tidak logout paksa.
+				if (res.status === 401) redirectToLoginIfNeeded();
 				throw await toAppError(res);
 			}
 			const envelope = (await res.json()) as ApiSingle<{ accessToken: string }>;
 			const token = envelope.data?.accessToken;
 			if (!token) {
 				tokenStore.clear();
+				redirectToLoginIfNeeded();
 				throw new AppError(res.status, 'Refresh token is missing', 'INVALID_REFRESH_TOKEN');
 			}
 			tokenStore.setAccessToken(token);

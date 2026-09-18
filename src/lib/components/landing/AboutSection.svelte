@@ -6,7 +6,7 @@
 		{ icon: 'coffee', bg: 'bg-caramel', title: 'Biji Premium', desc: 'Biji kopi pilihan dari perkebunan terbaik Indonesia' },
 		{ icon: 'leaf', bg: 'bg-leaf', title: 'Resep Tradisional', desc: 'Teknik roasting warisan turun-temurun' },
 		{ icon: 'bread', bg: 'bg-honey', title: 'Makanan Segar', desc: 'Pastri dan makanan pendamping dibuat setiap hari' },
-		{ icon: 'music', bg: 'bg-grape', title: 'Suasana Nyaman', desc: 'Ruang yang dirancang untuk bersantai dan bekerja' }
+		{ icon: 'heart', bg: 'bg-grape', title: 'Suasana Nyaman', desc: 'Ruang yang dirancang untuk bersantai dan bekerja' }
 	];
 </script>
 

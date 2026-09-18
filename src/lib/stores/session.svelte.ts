@@ -20,6 +20,7 @@ export type SessionStatus = 'unknown' | 'guest' | 'ready';
 class SessionStore {
 	user = $state<SessionUser | null>(null);
 	status = $state<SessionStatus>('unknown');
+	private restorePromise: Promise<void> | null = null;
 
 	get isLoggedIn(): boolean {
 		return this.user !== null;
@@ -87,6 +88,16 @@ class SessionStore {
 
 	async restore(): Promise<void> {
 		if (this.status !== 'unknown') return;
+		if (this.restorePromise) return this.restorePromise;
+		this.restorePromise = this.doRestore();
+		try {
+			await this.restorePromise;
+		} finally {
+			this.restorePromise = null;
+		}
+	}
+
+	private async doRestore(): Promise<void> {
 		try {
 			const token = await api.auth.refresh();
 			const claims = decodeAccessToken(token);

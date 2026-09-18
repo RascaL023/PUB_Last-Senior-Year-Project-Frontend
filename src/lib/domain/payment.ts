@@ -29,6 +29,7 @@ export interface PaymentResponse {
 }
 
 export interface PaymentListQuery {
+	keyword?: string;
 	invoiceId?: number;
 	status?: PaymentStatus;
 	paymentProvider?: PaymentProvider;

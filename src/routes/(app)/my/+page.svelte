@@ -5,6 +5,7 @@
 	import type { OrderResponse } from '$lib/domain/order';
 	import type { PagedResult } from '$lib/core/types/pagination';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { goto } from '$app/navigation';
 
 	const api = getApi();
@@ -101,8 +102,8 @@
 	<h2 class="font-display text-ink text-2xl font-extrabold mb-6">Akun Saya</h2>
 
 	{#if error}
-		<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-			{error}
+		<div class="mb-4">
+			<ErrorState code={403} title="Profil Member" message={error} />
 		</div>
 	{/if}
 
@@ -110,19 +111,19 @@
 		<h3 class="font-display text-ink text-lg font-bold mb-3">Sesi Aktif</h3>
 		{#if error && error.includes('profil')}
 			<div class="bg-shell border-line border-rice rounded-card p-6 text-center">
-				<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+				<Icon name="user" class="h-8 w-8 text-muted mx-auto mb-2" />
 				<p class="text-muted text-sm font-bold mb-2">Profil member belum dilengkapi</p>
 				<p class="text-muted text-xs">Silakan hubungi staf untuk mendaftarkan profil member Anda.</p>
 			</div>
 		{:else if dinings.length === 0}
 			<div class="bg-shell border-line border-rice rounded-card p-6 text-center">
-				<Icon name="coffee" class="h-8 w-8 text-muted mx-auto mb-2" />
+				<Icon name="user" class="h-8 w-8 text-muted mx-auto mb-2" />
 				<p class="text-muted text-sm font-bold">Belum ada sesi aktif.</p>
 				<p class="text-faint text-xs mt-1">Pindai QR di meja untuk memulai.</p>
 			</div>
 		{:else}
 			<div class="space-y-3">
-				{#each dinings as dining (dining.id)}
+				{#each dinings as dining (dining.diningId)}
 					<div class="bg-shell border-line border-rice rounded-card p-3 rice-lift">
 						<div class="flex justify-between items-center">
 							<div>
@@ -148,8 +149,12 @@
 	<div>
 		<h3 class="font-display text-ink text-lg font-bold mb-3">Riwayat Pesanan</h3>
 		{#if ordersError}
-			<div class="bg-danger/10 border border-danger rounded-card px-4 py-3 text-sm text-ink mb-4">
-				{ordersError}
+			<div class="mb-4">
+				<ErrorState
+					title="Gagal Memuat Riwayat"
+					message={ordersError}
+					onRetry={() => loadMyOrders(currentPage - 1)}
+				/>
 			</div>
 		{:else if ordersLoading}
 			<p class="text-muted text-sm">Memuat riwayat...</p>

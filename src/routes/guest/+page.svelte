@@ -46,7 +46,7 @@
 <div class="bg-app text-ink min-h-screen flex items-center justify-center px-3 py-8">
 	<div class="mx-auto max-w-md w-full">
 		<div class="text-center mb-8">
-			<Icon name="coffee" class="h-12 w-12 text-accent mx-auto mb-3" />
+			<Icon name="info" class="h-12 w-12 text-accent mx-auto mb-3" />
 			<h1 class="font-display text-ink text-3xl font-extrabold mb-2">Hysteria Cafe</h1>
 			<p class="text-muted text-sm font-bold">Masukkan kode meja (6 digit) untuk melihat pesanan Anda.</p>
 		</div>

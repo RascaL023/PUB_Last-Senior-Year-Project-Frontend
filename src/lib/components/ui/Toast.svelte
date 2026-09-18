@@ -11,6 +11,8 @@
 				return 'bg-leaf text-inverted';
 			case 'error':
 				return 'bg-danger text-inverted';
+			case 'warning':
+				return 'bg-honey text-ink';
 			default:
 				return 'bg-sky text-inverted';
 		}
@@ -22,8 +24,10 @@
 				return 'check';
 			case 'error':
 				return 'close';
+			case 'warning':
+				return 'info';
 			default:
-				return 'coffee';
+				return 'info';
 		}
 	}
 </script>

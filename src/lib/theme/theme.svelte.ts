@@ -50,7 +50,20 @@ class ThemeStore {
 		} catch {
 			saved = null;
 		}
-		this.setTheme(isThemeId(saved) ? saved : DEFAULT_THEME);
+		const theme = isThemeId(saved) ? saved : DEFAULT_THEME;
+		this.current = theme;
+		if (typeof document !== 'undefined') {
+			const root = document.documentElement;
+			// Idempotent dan tanpa animasi: init hanya memulihkan atribut,
+			// tidak pernah memutar View Transition (itu hanya untuk klik eksplisit).
+			if (root.getAttribute('data-theme') === theme) return;
+			root.setAttribute('data-theme', theme);
+		}
+		try {
+			localStorage.setItem(STORAGE_KEY, theme);
+		} catch {
+			return;
+		}
 	}
 }
 

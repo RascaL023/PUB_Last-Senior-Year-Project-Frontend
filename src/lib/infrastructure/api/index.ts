@@ -8,6 +8,7 @@ import { createCustomerRepository } from './repositories/customer-repository';
 import { createAuthorityRepository } from './repositories/authority-repository';
 import { createDiningRepository } from './repositories/dining-repository';
 import { createImageRepository } from './repositories/image-repository';
+import { createInvoiceRepository } from './repositories/invoice-repository';
 import { createKitchenRepository } from './repositories/kitchen-repository';
 import { createMenuCategoryRepository } from './repositories/menu-category-repository';
 import { createMenuRepository } from './repositories/menu-repository';
@@ -35,6 +36,7 @@ export interface Api {
 	dinings: ReturnType<typeof createDiningRepository>;
 	guestDinings: ReturnType<typeof createGuestDiningRepository>;
 	guestOrders: ReturnType<typeof createGuestOrderRepository>;
+	invoices: ReturnType<typeof createInvoiceRepository>;
 	tables: ReturnType<typeof createTableRepository>;
 	images: ReturnType<typeof createImageRepository>;
 	report: ReturnType<typeof createReportRepository>;
@@ -62,6 +64,7 @@ export function createApi(): Api {
 		dinings: createDiningRepository(http),
 		guestDinings: createGuestDiningRepository(http),
 		guestOrders: createGuestOrderRepository(http),
+		invoices: createInvoiceRepository(http),
 		tables: createTableRepository(http),
 		images: createImageRepository(http),
 		report: createReportRepository(http),

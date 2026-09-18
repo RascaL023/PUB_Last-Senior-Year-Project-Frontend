@@ -11,6 +11,7 @@ export class MenuStore {
 	menus: MenuResponse[] = $state([]);
 	categories: MenuCategoryResponse[] = $state([]);
 	selectedCategoryId: number | null = $state(null);
+	keyword = $state('');
 	loading = $state(false);
 	error: AppError | null = $state(null);
 	pagination: { currentPage: number; totalPages: number; totalItems: number } = $state({
@@ -21,20 +22,21 @@ export class MenuStore {
 	private lastPage = 0;
 	private lastSize = 6;
 
-	async loadMenus(page = 0, size = 6, keyword?: string) {
+	async loadMenus(page = 0, size = 6) {
 		this.loading = true;
 		this.error = null;
 		this.lastPage = page;
 		this.lastSize = size;
 		try {
-			const query: MenuListQuery = { page, size };
+			const query: MenuListQuery = { page, size, sort: 'name,asc' };
+			const keyword = this.keyword.trim();
 			if (keyword) {
 				query.name = keyword;
 			}
 			if (this.selectedCategoryId !== null) {
 				query.categoryId = this.selectedCategoryId;
 			}
-			const result: PagedResult<MenuResponse> = await api.menus.list(query);
+			const result: PagedResult<MenuResponse> = await api.menus.list(query, { auth: false });
 			this.menus = result.items;
 			this.pagination = {
 				currentPage: result.pagination.currentPage,
@@ -63,12 +65,18 @@ export class MenuStore {
 
 	setCategory(categoryId: number | null) {
 		this.selectedCategoryId = categoryId;
-		this.loadMenus(0, 6);
+		this.loadMenus(0, this.lastSize);
 	}
 
 	async search(keyword: string) {
+		this.keyword = keyword;
+		await this.loadMenus(0, this.lastSize);
+	}
+
+	reset() {
+		this.keyword = '';
 		this.selectedCategoryId = null;
-		await this.loadMenus(0, 6, keyword);
+		this.loadMenus(0, this.lastSize);
 	}
 }
 
