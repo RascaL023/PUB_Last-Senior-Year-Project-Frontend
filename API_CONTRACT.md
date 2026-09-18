@@ -4,7 +4,9 @@
 >
 > **Catatan penting per 2026-09-18:**
 > - **Refund sudah dihapus dari model.** `PaymentStatus` enum hanya punya `PENDING`, `PAID`, `FAILED`, `EXPIRED`. Tidak ada `REFUNDED`. Payment yang `PAID` bersifat final.
-> - **Guest checkout belum ada endpoint-nya.** Semua endpoint `POST /dinings/{id}/orders` masih authenticated. Mekanisme identifikasi tamu (guest token) belum diimplementasikan.
+> - **Guest dining sudah ada.** Tamu (tanpa login) akses sesi via `guestToken`/`guestCode` — lihat §L2. Request tamu **tidak menerima `customerId`** (anti-spoof); identitas member di-attach server-side, integrasi customer menyusul.
+> - **`customerId` divalidasi server-side.** `POST /orders` dan `POST /dinings/{id}/orders` dengan `customerId` yang tidak ada → `404`. Member yang login bisa attach identitas via `/my/dinings/{guestToken}/orders` (lihat §L3).
+> - **Invoice standalone dengan member** membawa snapshot `customerId` + `customerName`; invoice dining selalu `null` (tagihan kolektif).
 > - **CORS ditangani oleh Vercel proxy** (`vercel.json` di FE). Tidak perlu explicit origin config di `SecurityConfig`.
 > - **Local `dev` sudah paling maju** (10 commit di depan `origin/dev`). `origin/shadow` sudah merge ke local `dev`. `feature/payment`, `feature/invoice`, `feature/report` adalah stale branches — work-nya sudah dipindah ke `shadow`.
 > - **`jwt-bypass-uris`** di `application.yml` sudah mencakup `/api/v1/menus/categories` dan `/api/v1/menus/categories/{id}`.
@@ -464,6 +466,7 @@ Login ────────────────────────�
 | `POST /customers/register` | Registrasi member + akun |
 | `GET /menus`, `GET /menus/{id}`, `GET /v2/menus`, `GET /v2/menus/{id}` | Katalog publik (permitAll di SecurityConfig) |
 | `GET /menus/categories`, `GET /menus/categories/{id}` | Kategori menu publik (permitAll di SecurityConfig, jwt-bypass-uris) |
+| `GET /guest/dinings/{guestToken}`, `GET /guest/dinings/by-code/{guestCode}`, `POST /guest/dinings/{guestToken}/orders` | Surface tamu (publik; autentikasi = kepemilikan token, lihat §L2) |
 | `POST /payments/webhooks/xendit` | Server-to-server |
 | `POST /images/imagekit/webhooks` | Server-to-server |
 | `POST /auths/logout` | Cookie opsional — boleh tanpa token |
@@ -492,6 +495,7 @@ Login ────────────────────────�
 | **Invoices** | `POST /`, `GET /`, `GET /{id}`, `void`, `DELETE /{id}` | `invoice.create` / `invoice.read` / `invoice.update` / `invoice.delete` / `invoice.*` (per operasi) |
 | **Dining** | `POST /` (open), `POST /{id}/orders`, `POST /{id}/close` | `dining.create` / `dining.update` / `dining.*` |
 | | `GET /`, `GET /{id}` | `dining.read` / `dining.*` |
+| **My Dining** | `GET /my/dinings/{guestToken}`, `POST /my/dinings/{guestToken}/orders` | Cukup login (`isAuthenticated()`) — identitas member diambil dari token; akun tanpa profil member → `403` |
 | **Tables** | CRUD | `table.create` / `table.read` / `table.update` / `table.delete` / `table.*` |
 | **Menus V1/V2** | `POST /`, `PUT /{id}`, `PATCH restore`, `DELETE` | `menu.create` / `menu.update` / `menu.delete` / `menu.*` |
 | **Categories** | `GET /`, `GET /{id}` publik (permitAll); CRUD authenticated | `menu-category.create` / `menu-category.read` / `menu-category.update` / `menu-category.delete` / `menu-category.*` |
@@ -500,7 +504,7 @@ Login ────────────────────────�
 | **Image upload auth** | `GET /images/auth` | `image.create` / `image.*` ⚠️ |
 | **Reports** | `GET /reports/dashboard/summary` | `report.read` — **tanpa wildcard**, hanya ADMIN & CASHIER |
 
-> ⚠️ **Perbedaan authority dining antara CASHIER dan WAITER:** Di `DevRoleSeeder`, CASHIER hanya punya `dining.read` + `table.read` — **tidak** punya `dining.create`/`dining.update`. WAITER punya `dining.create/read/update`. Jika FE ingin kasir membuka/tutup meja, ubah seeder atau anotasi controller — jangan di FE.
+> ⚠️ **Perbedaan authority dining antara CASHIER dan WAITER:** Di `DevRoleSeeder`, CASHIER punya `dining.create`, `dining.update`, `dining.read`, `table.read`, `image.read`, `report.read`. WAITER punya `dining.create/read/update` + `table.create/read/update`. Jika FE ingin kasir membuka/tutup meja, seeder sudah mendukung — tidak perlu ubah controller.
 
 > ⚠️ **Quirk upload gambar:** endpoint `GET /images/auth` menuntut `image.create`, tetapi seeder hanya memberi `image.read` ke kasir/waiter/kitchen — jadi di dev, **hanya admin yang bisa upload gambar**. Kalau FE butuh kasir upload, ubah seeder (kasir + `image.create`) atau anotasi controller — jangan di FE.
 
@@ -1142,11 +1146,81 @@ Bentuknya sama seperti create order, hanya saja tanpa field `type` karena order 
   ],
   "createdAt": "2026-08-23T14:30:00Z",
   "updatedAt": null,
-  "closedAt": null
+  "closedAt": null,
+  "guestToken": "xK9dQ2f...",
+  "guestCode": "482913"
 }
 ```
 
 **Enum `DiningStatus`:** `OPEN`, `CLOSED`.
+
+> `guestToken` (opaque, Base64URL) dan `guestCode` (6 digit) di-generate backend saat sesi dibuka — dipakai FE untuk render QR/link tamu (lihat §L2). Sesi lama yang masih `OPEN` bisa `null`.
+
+---
+
+### L2. Guest Dining (`/api/v1/guest/dinings`) — publik
+
+Surface untuk **tamu tanpa login**. Autentikasi = kepemilikan `guestToken` (opaque, 128-bit+) di path — **bukan** JWT, **bukan** `permitAll` pada id numeric. Publik via `permitAll` (SecurityConfig) + `jwt-bypass-uris` (application.yml).
+
+| Method | Path | Keterangan |
+|---|---|---|
+| `GET /{guestToken}` | Status sesi (dipakai juga untuk **polling** FE tamu, 1 payload) | Sesi `CLOSED` tetap `200` (FE tampil "sesi selesai"); token salah → `404` generik `"Session not found"` |
+| `GET /by-code/{guestCode}` | Resolve via kode 6 digit (fallback QR gagal scan) | Hanya resolve sesi `OPEN`; selain itu `404` |
+| `POST /{guestToken}/orders` | Tamu menambah item ke sesi | Response `201`; hanya sesi `OPEN`; guard invoice (`PAID`/`VOID`) sama dengan endpoint staf |
+
+**GuestOrderRequest** (`POST /{guestToken}/orders`):
+
+```json
+{
+  "customerName": "Budi",
+  "notes": "Extra es",
+  "items": [
+    { "menuId": 1, "quantity": 2, "modifiers": [{ "modifierOptionId": 1 }] }
+  ]
+}
+```
+
+Validasi sama dengan request staf (`customerName` max 50, `notes` max 255, `items` min 1, `quantity` min 1). **Tanpa field `customerId`** — identitas member tidak pernah diterima dari body publik (anti-spoof); attachment identitas server-side menyusul saat integrasi customer.
+
+**GuestDiningResponse:**
+
+```json
+{
+  "tableNumber": "1",
+  "status": "OPEN",
+  "totalPrice": 54000,
+  "invoiceStatus": "OPEN",
+  "orders": [
+    { "status": "CREATED", "totalPrice": 54000, "createdAt": "2026-08-23T14:30:00Z" }
+  ]
+}
+```
+
+- `invoiceStatus`: `null` (belum ada tagihan) \| `OPEN` \| `PARTIALLY_PAID` \| `PAID` \| `VOID` — FE tamu cukup polling endpoint ini untuk tahu state pembayaran.
+- Tanpa ID internal (`diningId`, order id) dan tanpa nominal invoice rinci — minimal surface.
+- `totalPrice` = jumlah order non-`CANCELLED` (live).
+
+---
+
+### L3. My Dining (`/api/v1/my/dinings`) — authenticated
+
+Varian untuk **member yang login** (`CUSTOMER_BASE` cukup — tanpa authority staf) yang membuka link/QR sesi dining. Identitas diambil dari JWT (server-side), `guestToken` tetap menjadi kunci sesi — member tidak bisa menempel ke sesi yang tokennya tidak ia pegang.
+
+| Method | Path | Keterangan |
+|---|---|---|
+| `GET /{guestToken}` | Status sesi | Payload sama dengan §L2 |
+| `POST /{guestToken}/orders` | Member menambah item; `customerId` = profil member-nya otomatis | Response `201`; sesi harus `OPEN`; akun tanpa profil member → `403 FORBIDDEN` |
+
+Body: `GuestOrderRequest` yang sama dengan §L2 (`customerId` **tidak diterima** — identitas dari token, bukan body).
+
+Aturan `customerName` (body override):
+
+| Body `customerName` | Nama tersimpan di order |
+|---|---|
+| Kosong/null | Nama profil member (server-side) |
+| Terisi (mis. `"Budi +1"`) | Nilai body (snapshot) |
+
+Perilaku lain (guard invoice `PAID`/`VOID`, sesi `CLOSED` ditolak, polling) identik dengan §L2. Endpoint anonim (`/guest/**`) dan member (`/my/**`) dipisah agar fail-mode jelas: token invalid di `/my/**` → `401` standar.
 
 ---
 
@@ -1257,6 +1331,8 @@ Invoice umumnya **dibuat otomatis oleh backend via event**, bukan oleh frontend:
   "issuedAt": "2026-09-08T10:00:00Z",
   "createdAt": "2026-09-08T10:00:00Z",
   "updatedAt": "2026-09-08T10:05:00Z",
+  "customerId": null,
+  "customerName": null,
   "items": [
     {
       "id": 1,
@@ -1278,6 +1354,7 @@ Invoice umumnya **dibuat otomatis oleh backend via event**, bukan oleh frontend:
 Catatan untuk frontend:
 - `invoiceNumber` (bukan `id`) adalah referensi bisnis untuk ditampilkan ke pelanggan.
 - `diningId: null` = tagihan order standalone; terisi = tagihan gabungan satu sesi dining.
+- `customerId`/`customerName` hanya terisi pada **invoice standalone** dengan order yang di-tag ke member (`customerName` = snapshot nama profil member saat itu). Invoice dining sengaja `null` — tagihannya kolektif satu sesi, atribusi member ada di level order (`GET /dinings/{id}` → `orders[].customerId`).
 - Harga per baris adalah snapshot dari menu saat order item dibuat/diubah — perubahan harga menu kemudian **tidak** mereprice invoice. Perubahan struktur item order (tambah/ubah qty/hapus) pada invoice `OPEN` tanpa pembayaran **ikut tersinkron** ke invoice; setelah ada pembayaran, perubahan items ditolak (`400`).
 - Pada `PaymentResponse`: `amount` = uang yang masuk, `appliedAmount` = yang nempel ke tagihan, `excessAmount` = selisih yang diparkir (`amount = applied + excess`). `excess > 0` berarti ada kembalian/kelebihan yang perlu diputuskan kasir.
 
@@ -1406,7 +1483,7 @@ Jalankan dengan `--seed dev` atau profile `dev-seed`:
 Seeder formal hanya membuat akun admin; seeder dev membuat keempat akun di atas.
 
 > **Catatan:** Authority per role di `DevRoleSeeder` (sumber kebenaran):
-> - **CASHIER** hanya punya `dining.read` + `table.read` (bukan `dining.create`/`dining.update`)
+> - **CASHIER** punya `dining.create`, `dining.update`, `dining.read`, `table.read`, `image.read` (di `DevRoleSeeder`).
 > - **WAITER** punya `dining.create/read/update` + `table.create/read/update`
 > - **KITCHEN** punya `order.read` + `order.mark.preparing/ready` + `kitchen.read/update`
 > - **CASHIER** hanya punya `image.read` (bukan `image.create`) — jadi hanya admin yang bisa upload gambar di dev
@@ -1522,6 +1599,15 @@ GET    /api/v1/dinings?page=&size=
 GET    /api/v1/dinings/{id}
 POST   /api/v1/dinings/{id}/orders
 POST   /api/v1/dinings/{id}/close
+
+GUEST DINING (public, identifikasi via guestToken/guestCode)
+GET    /api/v1/guest/dinings/{guestToken}
+GET    /api/v1/guest/dinings/by-code/{guestCode}
+POST   /api/v1/guest/dinings/{guestToken}/orders
+
+MY DINING (authenticated, identitas member dari JWT)
+GET    /api/v1/my/dinings/{guestToken}
+POST   /api/v1/my/dinings/{guestToken}/orders
 
 CUSTOMERS
 POST   /api/v1/customers/register   (public, member + akun)
