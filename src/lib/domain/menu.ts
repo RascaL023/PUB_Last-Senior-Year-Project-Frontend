@@ -24,6 +24,19 @@ export interface MenuResponse {
 	createdAt: string;
 	updatedAt: string;
 	modifierTypes: ModifierTypeResponse[];
+	deletedAt: string | null;
+}
+
+export interface AdminMenuListQuery {
+	name?: string;
+	categoryId?: number;
+	minPrice?: number;
+	maxPrice?: number;
+	isAvailable?: boolean;
+	deleted?: 'active' | 'deleted' | 'all';
+	page?: number;
+	size?: number;
+	sort?: string;
 }
 
 export interface MenuListQuery {

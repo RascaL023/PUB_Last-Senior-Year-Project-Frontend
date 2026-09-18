@@ -54,6 +54,36 @@
 			href: '/my',
 			icon: 'user',
 			show: session.isLoggedIn
+		},
+		{
+			label: 'Menu',
+			href: '/menus',
+			icon: 'coffee',
+			show: can('menu.read')
+		},
+		{
+			label: 'Katalog',
+			href: '/catalog',
+			icon: 'bread',
+			show: can('menu-category.read') || can('menu-modifier.read')
+		},
+		{
+			label: 'Kelola Meja',
+			href: '/tables',
+			icon: 'table',
+			show: can('table.create') || can('table.update') || can('table.delete')
+		},
+		{
+			label: 'Pelanggan',
+			href: '/customers',
+			icon: 'user',
+			show: can('customer.read')
+		},
+		{
+			label: 'Pengguna',
+			href: '/users',
+			icon: 'user',
+			show: session.isLoggedIn && (can('role.read') || can('role.create'))
 		}
 	]);
 

@@ -4,6 +4,7 @@ import { createFetchHttpClient } from './fetch-http-client';
 import { createGuestDiningRepository } from './repositories/guest-dining-repository';
 import { createGuestOrderRepository } from './repositories/guest-order-repository';
 import { createAuthRepository } from './repositories/auth-repository';
+import { createAdminMenuRepository } from './repositories/admin-menu-repository';
 import { createCustomerRepository } from './repositories/customer-repository';
 import { createAuthorityRepository } from './repositories/authority-repository';
 import { createDiningRepository } from './repositories/dining-repository';
@@ -25,6 +26,7 @@ export interface Api {
 	http: HttpClient;
 	tokens: TokenStore;
 	auth: ReturnType<typeof createAuthRepository>;
+	adminMenus: ReturnType<typeof createAdminMenuRepository>;
 	customers: ReturnType<typeof createCustomerRepository>;
 	users: ReturnType<typeof createUserRepository>;
 	roles: ReturnType<typeof createRoleRepository>;
@@ -54,6 +56,7 @@ export function createApi(): Api {
 		http,
 		tokens,
 		auth: createAuthRepository(http, tokens),
+		adminMenus: createAdminMenuRepository(http),
 		customers: createCustomerRepository(http),
 		users: createUserRepository(http),
 		roles: createRoleRepository(http),

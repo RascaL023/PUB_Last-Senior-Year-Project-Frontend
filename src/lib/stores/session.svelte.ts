@@ -104,6 +104,18 @@ class SessionStore {
 		toastStore.show('Berhasil keluar.', 'success');
 	}
 
+	async logoutAll(): Promise<void> {
+		try {
+			await api.auth.logoutAll();
+		} catch {
+			// abaikan — sesi lokal tetap dibersihkan di finally
+		} finally {
+			this.user = null;
+			this.status = 'guest';
+		}
+		toastStore.show('Keluar dari semua perangkat.', 'success');
+	}
+
 	async restore(): Promise<void> {
 		if (this.status !== 'unknown') return;
 		if (this.restorePromise) return this.restorePromise;

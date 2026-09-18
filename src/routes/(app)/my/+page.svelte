@@ -300,13 +300,24 @@
 			<p class="text-muted mt-4 text-sm">
 				Sesi dan riwayat di halaman ini khusus member — gunakan halaman kerjamu.
 			</p>
-			<button
-				type="button"
-				onclick={() => goto(session.resolveLanding())}
-				class="bg-accent text-inverted rounded-btn border-rice border-line rice-press mt-2 px-4 py-2 text-sm font-bold"
-			>
-				Ke Halaman Kerja
-			</button>
+			<div class="mt-2 flex flex-wrap gap-2">
+				<button
+					type="button"
+					onclick={() => goto(session.resolveLanding())}
+					class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+				>
+					Ke Halaman Kerja
+				</button>
+				<button
+					type="button"
+					onclick={() => {
+						if (confirm('Keluar dari semua perangkat?')) void session.logoutAll().then(() => goto('/login'));
+					}}
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+				>
+					Keluar semua perangkat
+				</button>
+			</div>
 		</div>
 	{/if}
 	{#if !isStaff}
@@ -319,19 +330,30 @@
 	<div class="bg-shell border-line border-rice rounded-card mb-8 p-4">
 		<div class="flex items-center justify-between gap-2">
 			<h3 class="font-display text-ink text-lg font-bold">Profil Member</h3>
-			{#if profile && !editingProfile}
+			<div class="flex gap-2">
 				<button
 					type="button"
 					onclick={() => {
-						profileName = profile?.name ?? '';
-						profilePhone = profile?.phone ?? '';
-						editingProfile = true;
+						if (confirm('Keluar dari semua perangkat?')) void session.logoutAll().then(() => goto('/login'));
 					}}
 					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-xs font-bold"
 				>
-					Ubah
+					Keluar semua perangkat
 				</button>
-			{/if}
+				{#if profile && !editingProfile}
+					<button
+						type="button"
+						onclick={() => {
+							profileName = profile?.name ?? '';
+							profilePhone = profile?.phone ?? '';
+							editingProfile = true;
+						}}
+						class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-1.5 text-xs font-bold"
+					>
+						Ubah
+					</button>
+				{/if}
+			</div>
 		</div>
 		{#if profileError}
 			<p class="text-muted mt-2 text-sm">{profileError}</p>
