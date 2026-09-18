@@ -6,6 +6,7 @@
 	import type { MenuCategoryResponse } from '$lib/domain/menu-category';
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import { toAppError } from '$lib/core/http/error-messages';
+	import { formatWibDateTime } from '$lib/core/time/wib';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 
@@ -309,7 +310,7 @@
 								</div>
 								<span class="text-ink font-bold font-mono text-sm">{formatPrice(order.totalPrice)}</span>
 								<p class="text-xs text-muted font-mono mb-2">
-									{new Date(order.createdAt).toLocaleString('id-ID')}
+									{formatWibDateTime(order.createdAt)}
 								</p>
 
 								{#if order.items && order.items.length > 0}

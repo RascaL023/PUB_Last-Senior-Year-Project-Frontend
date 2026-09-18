@@ -2,6 +2,8 @@
 	import { onDestroy } from 'svelte';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
+	import { toAppError } from '$lib/core/http/error-messages';
+	import { formatWibTime } from '$lib/core/time/wib';
 	import type { KitchenTicket, KitchenListQuery, OrderStatus } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
@@ -27,7 +29,7 @@
 			const query: KitchenListQuery = { status: 'CONFIRMED,PREPARING' };
 			tickets = (await api.kitchen.list(query)) ?? [];
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		} finally {
 			loading = false;
 		}
@@ -39,7 +41,7 @@
 		try {
 			await api.orders.transition(orderId, 'prepare');
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		} finally {
 			polling = false;
 			await loadTickets();
@@ -52,7 +54,7 @@
 		try {
 			await api.orders.transition(orderId, 'ready');
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		} finally {
 			polling = false;
 			await loadTickets();
@@ -85,7 +87,7 @@
 	}
 
 	function formatTime(date: string): string {
-		return new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+		return formatWibTime(date);
 	}
 
 	function startPolling() {

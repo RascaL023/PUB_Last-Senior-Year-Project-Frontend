@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
+	import { formatWibDate } from '$lib/core/time/wib';
 	import type { DashboardSummary, DashboardSummaryQuery } from '$lib/domain/report';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
@@ -47,9 +48,7 @@
 	}
 
 	function formatDate(date: string | null | undefined): string {
-		if (!date) return '-';
-		const d = new Date(date);
-		return d.toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' });
+		return formatWibDate(date);
 	}
 
 	function refreshDateRange() {

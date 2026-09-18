@@ -90,15 +90,18 @@ class SessionStore {
 	}
 
 	async logout(): Promise<void> {
+		// Best-effort: tujuan logout (keluar) tercapai selama state lokal
+		// dibersihkan, walau request ke server gagal (mis. cookie sudah
+		// kedaluwarsa sehingga BE menjawab 401 "Token not found").
 		try {
 			await api.auth.logout();
-			toastStore.show('Berhasil keluar.', 'success');
-		} catch (e) {
-			toastStore.show('Gagal keluar. Coba lagi.', 'error');
+		} catch {
+			// abaikan — sesi lokal tetap dibersihkan di finally
 		} finally {
 			this.user = null;
 			this.status = 'guest';
 		}
+		toastStore.show('Berhasil keluar.', 'success');
 	}
 
 	async restore(): Promise<void> {

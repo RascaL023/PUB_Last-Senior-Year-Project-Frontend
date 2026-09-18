@@ -7,6 +7,7 @@ import { createAuthRepository } from './repositories/auth-repository';
 import { createCustomerRepository } from './repositories/customer-repository';
 import { createAuthorityRepository } from './repositories/authority-repository';
 import { createDiningRepository } from './repositories/dining-repository';
+import { createEmployeeRepository } from './repositories/employee-repository';
 import { createImageRepository } from './repositories/image-repository';
 import { createInvoiceRepository } from './repositories/invoice-repository';
 import { createKitchenRepository } from './repositories/kitchen-repository';
@@ -34,6 +35,7 @@ export interface Api {
 	orders: ReturnType<typeof createOrderRepository>;
 	payments: ReturnType<typeof createPaymentRepository>;
 	dinings: ReturnType<typeof createDiningRepository>;
+	employees: ReturnType<typeof createEmployeeRepository>;
 	guestDinings: ReturnType<typeof createGuestDiningRepository>;
 	guestOrders: ReturnType<typeof createGuestOrderRepository>;
 	invoices: ReturnType<typeof createInvoiceRepository>;
@@ -62,6 +64,7 @@ export function createApi(): Api {
 		orders: createOrderRepository(http),
 		payments: createPaymentRepository(http),
 		dinings: createDiningRepository(http),
+		employees: createEmployeeRepository(http),
 		guestDinings: createGuestDiningRepository(http),
 		guestOrders: createGuestOrderRepository(http),
 		invoices: createInvoiceRepository(http),

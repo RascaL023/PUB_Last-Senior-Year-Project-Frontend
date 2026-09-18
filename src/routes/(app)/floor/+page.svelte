@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
+	import { toAppError } from '$lib/core/http/error-messages';
+	import { formatWibTime } from '$lib/core/time/wib';
 	import type { DiningTableResponse, TableListQuery } from '$lib/domain/table';
 	import type { DiningResponse, DiningListQuery } from '$lib/domain/dining';
 	import type { OrderResponse, OrderListQuery } from '$lib/domain/order';
@@ -29,7 +31,7 @@
 			const result = await api.tables.list(query);
 			tables = result.items;
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		}
 	}
 
@@ -39,7 +41,7 @@
 			const result = await api.dinings.list(query);
 			openDinings = result.items;
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		}
 	}
 
@@ -49,12 +51,12 @@
 			const result = await api.orders.list(query);
 			readyOrders = result.items;
 		} catch (e) {
-			error = (e as Error).message;
+			error = toAppError(e).message;
 		}
 	}
 
 	function formatDate(date: string): string {
-		return new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+		return formatWibTime(date);
 	}
 
 	function findDiningByTable(tableId: number): DiningResponse | undefined {

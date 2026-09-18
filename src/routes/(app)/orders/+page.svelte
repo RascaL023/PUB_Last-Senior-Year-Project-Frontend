@@ -2,9 +2,11 @@
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { OrderResponse, OrderStatus } from '$lib/domain/order';
+	import type { MenuResponse } from '$lib/domain/menu';
 	import type { PagedResult } from '$lib/core/types/pagination';
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
+	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { goto } from '$app/navigation';
@@ -22,8 +24,21 @@
 	let totalPages = $state(1);
 	let totalItems = $state(0);
 
+	let showCreate = $state(false);
+	let menus = $state<MenuResponse[]>([]);
+	let menusLoaded = $state(false);
+	let newCustomer = $state('');
+	let newNotes = $state('');
+	let lines = $state<{ menuId: number | null; quantity: number; options: number[] }[]>([]);
+	let creating = $state(false);
+	let createdNumber = $state<string | null>(null);
+	let createdTrack = $state<string | null>(null);
+
 	const canRead = $derived(session.hasAuthority('order.read') || session.hasAuthority('order.*'));
 	const canUpdate = $derived(session.hasAuthority('order.update') || session.hasAuthority('order.*'));
+	const canCreate = $derived(
+		session.hasAuthority('order.create') || session.hasAuthority('order.*')
+	);
 
 	function statusLabel(status: OrderStatus): string {
 		const labels: Record<OrderStatus, string> = {
@@ -136,6 +151,78 @@
 		loadOrders(0);
 	}
 
+	async function openCreate() {
+		showCreate = !showCreate;
+		createdNumber = null;
+		createdTrack = null;
+		if (showCreate && !menusLoaded) {
+			try {
+				const result = await api.menus.list(
+					{ page: 0, size: 100, sort: 'name,asc' },
+					{ auth: false }
+				);
+				menus = result.items;
+				menusLoaded = true;
+			} catch (e) {
+				toastStore.show(toAppError(e).message, 'error');
+			}
+		}
+		if (showCreate && lines.length === 0) {
+			lines = [{ menuId: null, quantity: 1, options: [] }];
+		}
+	}
+
+	function toggleLineOption(lineIdx: number, optionId: number, maxSelection: number) {
+		const line = lines[lineIdx];
+		if (!line) return;
+		if (line.options.includes(optionId)) {
+			line.options = line.options.filter((id) => id !== optionId);
+		} else if (maxSelection === 1) {
+			const menu = menus.find((m) => m.id === line.menuId);
+			const modType = menu?.modifierTypes.find((t) => t.options.some((o) => o.id === optionId));
+			const siblingIds = new Set(modType?.options.map((o) => o.id) ?? []);
+			line.options = [...line.options.filter((id) => !siblingIds.has(id)), optionId];
+		} else {
+			line.options = [...line.options, optionId];
+		}
+	}
+
+	function menuOf(menuId: number | null): MenuResponse | undefined {
+		return menus.find((m) => m.id === menuId);
+	}
+
+	async function submitTakeaway() {
+		const items = lines
+			.filter((l) => l.menuId !== null && l.quantity >= 1)
+			.map((l) => ({
+				menuId: l.menuId as number,
+				quantity: l.quantity,
+				modifiers: l.options.map((modifierOptionId) => ({ modifierOptionId }))
+			}));
+		if (items.length === 0 || creating) return;
+		creating = true;
+		try {
+			const created = await api.orders.create({
+				type: 'TAKEAWAY',
+				customerName: newCustomer.trim() || undefined,
+				notes: newNotes.trim() || undefined,
+				items
+			});
+			if (!created) throw new Error('Respons kosong dari server');
+			createdNumber = created.orderNumber;
+			createdTrack = created.trackToken;
+			toastStore.show(`Order ${created.orderNumber} dibuat.`, 'success');
+			lines = [{ menuId: null, quantity: 1, options: [] }];
+			newCustomer = '';
+			newNotes = '';
+			await loadOrders(0);
+		} catch (e) {
+			toastStore.show(toAppError(e).message, 'error');
+		} finally {
+			creating = false;
+		}
+	}
+
 	function handlePageChange(delta: number) {
 		const target = currentPage + delta;
 		if (target < 1 || target > totalPages) return;
@@ -158,7 +245,18 @@
 				<p class="text-muted text-sm font-bold">Anda tidak memiliki izin untuk melihat daftar order.</p>
 			</div>
 		{:else}
-			<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight mb-4">Daftar Order</h2>
+			<div class="mb-4 flex items-center justify-between gap-2">
+				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Daftar Order</h2>
+				{#if canCreate}
+					<button
+						type="button"
+						onclick={openCreate}
+						class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+					>
+						{showCreate ? 'Tutup' : '+ Takeaway'}
+					</button>
+				{/if}
+			</div>
 
 			{#if error}
 				<div class="mb-4">
@@ -168,6 +266,115 @@
 						message={error.message}
 						onRetry={() => loadOrders(currentPage - 1)}
 					/>
+				</div>
+			{/if}
+
+			{#if showCreate && canCreate}
+				<div class="bg-shell border-line border-rice rounded-card mb-4 p-4">
+					<h3 class="font-display text-ink mb-3 text-base font-bold">Order Takeaway Baru</h3>
+					<div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+							Nama pelanggan
+							<input
+								type="text"
+								bind:value={newCustomer}
+								maxlength="50"
+								placeholder="cth. Budi"
+								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+							/>
+						</label>
+						<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+							Catatan
+							<input
+								type="text"
+								bind:value={newNotes}
+								maxlength="255"
+								placeholder="cth. Es sedikit"
+								class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+							/>
+						</label>
+					</div>
+					{#each lines as line, i}
+						<div class="border-linemuted mb-3 border-t pt-3">
+							<div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+								<label class="flex flex-1 flex-col gap-1 text-xs font-bold text-ink">
+									Menu
+									<select
+										bind:value={lines[i].menuId}
+										onchange={() => (lines[i].options = [])}
+										class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm font-bold"
+									>
+										<option value={null}>Pilih menu...</option>
+										{#each menus as menu (menu.id)}
+											<option value={menu.id}>{menu.name}</option>
+										{/each}
+									</select>
+								</label>
+								<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+									Qty
+									<input
+										type="number"
+										min="1"
+										bind:value={lines[i].quantity}
+										class="bg-subtle text-ink border-line border-rice rounded-btn w-20 px-3 py-2 text-sm"
+									/>
+								</label>
+								{#if lines.length > 1}
+									<button
+										type="button"
+										onclick={() => (lines = lines.filter((_, idx) => idx !== i))}
+										class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+									>
+										Hapus
+									</button>
+								{/if}
+							</div>
+							{#if menuOf(line.menuId)?.modifierTypes?.length}
+								{#each menuOf(line.menuId)?.modifierTypes ?? [] as modType}
+									<p class="text-ink mt-2 mb-1 text-xs font-bold">{modType.name}</p>
+									<div class="flex flex-wrap gap-1">
+										{#each modType.options as opt}
+											<button
+												type="button"
+												onclick={() => toggleLineOption(i, opt.id, modType.maxSelection)}
+												class="rounded-pill border-rice border-line rice-press px-2 py-1 font-mono text-xs font-bold
+													{line.options.includes(opt.id) ? 'bg-accent text-inverted' : 'bg-subtle text-muted'}"
+											>
+												{opt.name}
+											</button>
+										{/each}
+									</div>
+								{/each}
+							{/if}
+						</div>
+					{/each}
+					<div class="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onclick={() => (lines = [...lines, { menuId: null, quantity: 1, options: [] }])}
+							class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+						>
+							+ Baris
+						</button>
+						<button
+							type="button"
+							disabled={creating}
+							onclick={submitTakeaway}
+							class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold disabled:opacity-50"
+						>
+							{creating ? 'Menyimpan...' : 'Buat Order'}
+						</button>
+						{#if createdNumber && createdTrack}
+							<a
+								href={`/guest/track/${createdTrack}`}
+								target="_blank"
+								rel="noopener"
+								class="text-accent text-xs font-bold hover:underline"
+							>
+								{createdNumber} → lacak & bagikan
+							</a>
+						{/if}
+					</div>
 				</div>
 			{/if}
 

@@ -2,8 +2,10 @@
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
 	import type { OrderResponse, OrderStatus, OrderTransition } from '$lib/domain/order';
+	import type { InvoiceResponse } from '$lib/domain/invoice';
 	import type { AppError } from '$lib/core/http/http-errors';
 	import { toAppError } from '$lib/core/http/error-messages';
+	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import { goto } from '$app/navigation';
@@ -16,6 +18,12 @@
 	let order = $state<OrderResponse | null>(null);
 	let loading = $state(false);
 	let error = $state<AppError | null>(null);
+	let invoice = $state<InvoiceResponse | null>(null);
+
+	let editing = $state(false);
+	let editCustomer = $state('');
+	let editNotes = $state('');
+	let saving = $state(false);
 
 	const canRead = $derived(session.hasAuthority('order.read') || session.hasAuthority('order.*'));
 	const canUpdate = $derived(session.hasAuthority('order.update') || session.hasAuthority('order.*'));
@@ -87,12 +95,46 @@
 		loading = true;
 		error = null;
 		order = null;
+		invoice = null;
 		try {
 			order = await api.orders.getById(orderId);
+			if (order) {
+				editCustomer = order.customerName ?? '';
+				editNotes = order.notes ?? '';
+				try {
+					const found = await api.invoices.list({ orderId: order.id, size: 1 });
+					invoice = found.items[0] ?? null;
+				} catch {
+					invoice = null;
+				}
+			}
 		} catch (e) {
 			error = toAppError(e);
 		} finally {
 			loading = false;
+		}
+	}
+
+	// PATCH notes/customerName selalu boleh (bahkan setelah invoice dibayar).
+	// Perubahan items diblokir BE saat invoice PARTIALLY_PAID/PAID (400).
+	const itemsLocked = $derived(
+		invoice !== null && (invoice.status === 'PARTIALLY_PAID' || invoice.status === 'PAID')
+	);
+
+	async function handleSaveEdit() {
+		if (!canUpdate || !order || saving) return;
+		saving = true;
+		try {
+			order = await api.orders.patch(order.id, {
+				customerName: editCustomer.trim() || undefined,
+				notes: editNotes.trim() || undefined
+			});
+			editing = false;
+			toastStore.show('Order diperbarui.', 'success');
+		} catch (e) {
+			error = toAppError(e);
+		} finally {
+			saving = false;
 		}
 	}
 
@@ -157,9 +199,23 @@
 				</button>
 			</div>
 
-			<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight mb-4">
-				Order #{order.orderNumber}
-			</h2>
+			<div class="mb-4 flex flex-wrap items-center gap-2">
+				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">
+					Order #{order.orderNumber}
+				</h2>
+				{#if invoice}
+					<span class="rounded-pill px-2 py-0.5 font-mono text-xs font-bold
+						{invoice.status === 'PAID'
+							? 'bg-leaf text-inverted'
+							: invoice.status === 'PARTIALLY_PAID'
+								? 'bg-sky text-inverted'
+								: invoice.status === 'VOID'
+									? 'bg-danger text-inverted'
+									: 'bg-honey text-ink'}">
+						Tagihan: {invoice.status}
+					</span>
+				{/if}
+			</div>
 
 			{#if error}
 				<div class="mb-4">
@@ -206,6 +262,63 @@
 						</div>
 					{/if}
 				</div>
+
+				{#if canUpdate}
+					<div class="border-linemuted mb-4 border-t pt-4">
+						{#if editing}
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+									Nama pelanggan
+									<input
+										type="text"
+										bind:value={editCustomer}
+										maxlength="50"
+										class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+									/>
+								</label>
+								<label class="flex flex-col gap-1 text-xs font-bold text-ink">
+									Catatan
+									<input
+										type="text"
+										bind:value={editNotes}
+										maxlength="255"
+										class="bg-subtle text-ink border-line border-rice rounded-btn px-3 py-2 text-sm outline-none placeholder:text-faint"
+									/>
+								</label>
+							</div>
+							<div class="mt-3 flex gap-2">
+								<button
+									type="button"
+									disabled={saving}
+									onclick={handleSaveEdit}
+									class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-xs font-bold disabled:opacity-50"
+								>
+									{saving ? 'Menyimpan...' : 'Simpan'}
+								</button>
+								<button
+									type="button"
+									onclick={() => (editing = false)}
+									class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-xs font-bold"
+								>
+									Batal
+								</button>
+							</div>
+						{:else}
+							<button
+								type="button"
+								onclick={() => (editing = true)}
+								class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-4 py-2 text-xs font-bold"
+							>
+								Ubah nama / catatan
+							</button>
+						{/if}
+						{#if itemsLocked}
+							<p class="text-muted mt-2 font-mono text-xs">
+								Item terkunci: tagihan {invoice?.status} sudah ada pembayaran (guard BE 400).
+							</p>
+						{/if}
+					</div>
+				{/if}
 
 				<h3 class="font-display text-ink text-lg font-bold mb-3">Item Order</h3>
 				<div class="space-y-3">

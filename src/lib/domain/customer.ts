@@ -21,11 +21,6 @@ export interface CustomerPatchRequest {
 	notes?: string;
 }
 
-export interface CustomerClaimRequest {
-	email: string;
-	password: string;
-}
-
 export interface CustomerListQuery {
 	keyword?: string;
 	page?: number;
