@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
 	import { formatWibDate } from '$lib/core/time/wib';
 	import type { DashboardSummary, DashboardSummaryQuery } from '$lib/domain/report';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 
 	const api = getApi();
 
@@ -33,9 +35,12 @@
 		}
 	}
 
+	// Muat sekali saat sesi siap. `untrack` mencegah tanggal (yang dibaca di
+	// dalam loader) menjadi dependency sehingga perubahan filter tidak memicu
+	// request ganda (input sudah punya handler `onchange` sendiri).
 	$effect(() => {
 		if (session.status === 'ready' && canRead) {
-			void loadSummary();
+			untrack(() => void loadSummary());
 		}
 	});
 
@@ -67,7 +72,9 @@
 
 <section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
-	{#if !canRead}
+	{#if session.status !== 'ready'}
+		<LoadingState label="Menyiapkan dashboard…" />
+	{:else if !canRead}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 			<Icon name="dashboard" class="text-muted mx-auto mb-2 h-8 w-8" />
 			<h2 class="font-display text-ink mb-2 text-xl font-extrabold">Akses Dibatasi</h2>
@@ -122,8 +129,21 @@
 		<p class="text-faint ml-auto font-mono text-xs">Kosong = seluruh periode</p>
 	</div>
 
-	{#if loading}
-		<div class="text-center py-12 text-muted">Memuat dashboard...</div>
+	{#if loading && !summary}
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			{#each Array(2) as _}
+				<div class="bg-shell border-line border-rice rounded-card p-6">
+					<div class="skeleton-shimmer mb-4 h-5 w-32 rounded-full"></div>
+					<div class="space-y-4">
+						{#each Array(3) as _}
+							<div class="skeleton-shimmer h-4 w-full rounded-full"></div>
+						{/each}
+						<div class="skeleton-shimmer h-8 w-2/3 rounded-btn"></div>
+					</div>
+				</div>
+			{/each}
+		</div>
+		<p class="text-muted mt-6 text-center text-sm font-bold">Memuat dashboard…</p>
 	{:else if !summary}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 			<Icon name="dashboard" class="h-8 w-8 text-muted mx-auto mb-2" />

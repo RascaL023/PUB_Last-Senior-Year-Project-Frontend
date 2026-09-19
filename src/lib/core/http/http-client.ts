@@ -6,6 +6,11 @@ export interface RequestOptions {
 }
 
 export interface HttpClient {
+	/**
+	 * Minta access token baru lewat cookie refresh.
+	 * Single-flight: pemanggil yang bersamaan berbagi satu request refresh.
+	 */
+	refreshAccessToken(): Promise<string>;
 	getSingle<T>(path: string, options?: RequestOptions): Promise<T | null>;
 	getPaged<T>(path: string, options?: RequestOptions): Promise<PagedResult<T>>;
 	post<T>(path: string, body?: unknown, options?: RequestOptions): Promise<T | null>;

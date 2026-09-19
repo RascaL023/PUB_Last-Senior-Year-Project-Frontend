@@ -5,6 +5,7 @@ import type { ForgotPasswordRequest, ResetPasswordRequest } from '$lib/domain/au
 import { toastStore } from '$lib/stores/toastStore.svelte';
 import { getFriendlyMessage } from '$lib/core/http/error-messages';
 import { AppError } from '$lib/core/http/http-errors';
+import { onSessionExpired } from '$lib/core/auth/auth-events';
 import { can, canAny } from '$lib/config/nav';
 
 const api = getApi();
@@ -199,8 +200,18 @@ class SessionStore {
 				return;
 			}
 			this.applySession(Number(claims.sub), hint.email, token);
-		} catch {
-			this.clear();
+		} catch (e) {
+			const status = e instanceof AppError ? e.status : 0;
+			// 401 = refresh token benar-benar mati → sesi & petunjuk dibuang.
+			// Selain itu (jaringan/5xx) petunjuk dipertahankan agar muat ulang
+			// berikutnya masih bisa memulihkan sesi tanpa login ulang.
+			if (status === 401) {
+				this.clear();
+			} else {
+				api.tokens.clear();
+				this.user = null;
+				this.status = 'guest';
+			}
 		}
 	}
 
@@ -228,3 +239,7 @@ class SessionStore {
 }
 
 export const session = new SessionStore();
+
+// Saat refresh token ditolak server (sesi benar-benar berakhir), bersihkan
+// state sesi lokal tanpa toast supaya header & guard langsung menyesuaikan.
+onSessionExpired(() => session.clear());

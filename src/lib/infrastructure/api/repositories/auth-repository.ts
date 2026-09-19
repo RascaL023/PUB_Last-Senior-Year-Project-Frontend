@@ -1,7 +1,7 @@
 import { API_AUTH } from '$lib/config/env';
 import type { TokenStore } from '$lib/core/auth/token-store';
 import type { HttpClient } from '$lib/core/http/http-client';
-import type { LoginRequest, LoginResponse, RefreshResponse, ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse } from '$lib/domain/auth';
+import type { LoginRequest, LoginResponse, ForgotPasswordRequest, ForgotPasswordResponse, ResetPasswordRequest, ResetPasswordResponse } from '$lib/domain/auth';
 import type { AuthRepository } from '$lib/domain/ports/auth-repository';
 
 export function createAuthRepository(http: HttpClient, tokens: TokenStore): AuthRepository {
@@ -14,14 +14,14 @@ export function createAuthRepository(http: HttpClient, tokens: TokenStore): Auth
 			tokens.setAccessToken(data.accessToken);
 			return data;
 		},
+		/**
+		 * Memakai coordinator refresh milik HTTP client supaya alur restore sesi
+		 * dan retry-401 berbagi SATU request refresh (single-flight). Tanpa ini,
+		 * dua request refresh bersamaan dapat membuat BE merotasi refresh token
+		 * dua kali dan menolak yang kedua.
+		 */
 		async refresh(): Promise<string> {
-			const data = await http.post<RefreshResponse>(`${API_AUTH}/refresh`, undefined, {
-				auth: false
-			});
-			const token = data?.accessToken;
-			if (!token) throw new Error('Refresh token is missing');
-			tokens.setAccessToken(token);
-			return token;
+			return http.refreshAccessToken();
 		},
 		async logout(): Promise<void> {
 			try {

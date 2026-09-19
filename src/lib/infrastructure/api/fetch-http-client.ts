@@ -1,13 +1,24 @@
 import { API_AUTH } from '$lib/config/env';
 import type { TokenStore } from '$lib/core/auth/token-store';
+import { decodeAccessToken, isExpired } from '$lib/core/auth/jwt';
+import { emitSessionExpired } from '$lib/core/auth/auth-events';
 import type { HttpClient, RequestOptions } from '$lib/core/http/http-client';
 import { AppError } from '$lib/core/http/http-errors';
-import type { ApiErrorEnvelope, ApiPaged, ApiSingle, ErrorCode } from '$lib/core/types/api';
+import type { ApiErrorEnvelope, ApiPaged, ApiSingle } from '$lib/core/types/api';
 import { toQuery, type PagedResult } from '$lib/core/types/pagination';
 
-const REFRESHABLE_CODES: (ErrorCode | null)[] = ['ACCESS_TOKEN_EXPIRED', 'INVALID_ACCESS_TOKEN'];
+const REFRESH_PATH = `${API_AUTH}/refresh`;
 
+/** Halaman publik: jangan pernah dipaksa redirect ke /login dari sini. */
 const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+
+/**
+ * Setelah satu percobaan refresh gagal, tahan percobaan berikutnya selama
+ * beberapa detik. Tanpa ini, sekumpulan request yang 401 bersamaan bisa
+ * memicu rentetan request refresh (dan pada provider dengan rotasi token,
+ * request kedua akan menabrak token yang sudah dirotasi).
+ */
+const REFRESH_COOLDOWN_MS = 5_000;
 
 function isPublicPath(path: string): boolean {
 	return PUBLIC_PATHS.includes(path) || path.startsWith('/guest');
@@ -26,38 +37,9 @@ interface InternalOptions extends RequestOptions {
 }
 
 export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
-	let refreshPromise: Promise<string> | null = null;
-
-	async function refreshAccessToken(): Promise<string> {
-		if (refreshPromise) return refreshPromise;
-		refreshPromise = (async () => {
-			const res = await fetch(`${API_AUTH}/refresh`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-			if (!res.ok) {
-				tokenStore.clear();
-				// Hanya sesi yang benar-benar mati (401) yang di-redirect.
-				// Error 5xx / jaringan dibiarkan sebagai error biasa agar tidak logout paksa.
-				if (res.status === 401) redirectToLoginIfNeeded();
-				throw await toAppError(res);
-			}
-			const envelope = (await res.json()) as ApiSingle<{ accessToken: string }>;
-			const token = envelope.data?.accessToken;
-			if (!token) {
-				tokenStore.clear();
-				redirectToLoginIfNeeded();
-				throw new AppError(res.status, 'Refresh token is missing', 'INVALID_REFRESH_TOKEN');
-			}
-			tokenStore.setAccessToken(token);
-			return token;
-		})();
-		try {
-			return await refreshPromise;
-		} finally {
-			refreshPromise = null;
-		}
-	}
+	/** Satu-satunya request refresh yang boleh berjalan pada satu waktu. */
+	let inFlightRefresh: Promise<string> | null = null;
+	let refreshCooldownUntil = 0;
 
 	async function toAppError(res: Response): Promise<AppError> {
 		if (res.status === 204) return new AppError(res.status, 'No content');
@@ -74,6 +56,67 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 		}
 	}
 
+	async function performRefresh(): Promise<string> {
+		let res: Response;
+		try {
+			res = await fetch(REFRESH_PATH, { method: 'POST', credentials: 'include' });
+		} catch {
+			throw new AppError(0, 'Tidak dapat menghubungi server. Periksa koneksimu.');
+		}
+
+		if (!res.ok) {
+			const error = await toAppError(res);
+			// Bersihkan sisa token & tandai sesi berakhir. Hanya 401 yang
+			// berarti refresh token benar-benar mati (5xx/jaringan dibiarkan
+			// sebagai error biasa supaya tidak logout paksa).
+			tokenStore.clear();
+			refreshCooldownUntil = Date.now() + REFRESH_COOLDOWN_MS;
+			if (res.status === 401) {
+				emitSessionExpired();
+				redirectToLoginIfNeeded();
+			}
+			throw error;
+		}
+
+		const envelope = (await res.json()) as ApiSingle<{ accessToken: string }>;
+		const token = envelope.data?.accessToken;
+		if (!token) {
+			tokenStore.clear();
+			refreshCooldownUntil = Date.now() + REFRESH_COOLDOWN_MS;
+			emitSessionExpired();
+			redirectToLoginIfNeeded();
+			throw new AppError(res.status, 'Access token tidak diterima dari server', 'INVALID_REFRESH_TOKEN');
+		}
+
+		refreshCooldownUntil = 0;
+		tokenStore.setAccessToken(token);
+		return token;
+	}
+
+	/**
+	 * Single-flight: semua pemanggil — retry 401, restore sesi, maupun alur
+	 * lain — berbagi satu request refresh yang sama.
+	 */
+	function refreshAccessToken(): Promise<string> {
+		if (!inFlightRefresh) {
+			inFlightRefresh = performRefresh().finally(() => {
+				inFlightRefresh = null;
+			});
+		}
+		return inFlightRefresh;
+	}
+
+	function isCoolingDown(): boolean {
+		return Date.now() < refreshCooldownUntil;
+	}
+
+	function accessTokenExpired(): boolean {
+		const token = tokenStore.getAccessToken();
+		if (!token) return false;
+		const claims = decodeAccessToken(token);
+		return claims !== null && isExpired(claims);
+	}
+
 	async function request(
 		method: string,
 		path: string,
@@ -85,6 +128,19 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 		if (body !== undefined) headers['Content-Type'] = 'application/json';
 
 		const useAuth = options.auth ?? true;
+		const isRefreshCall = path.endsWith('/refresh');
+		const canRefresh = useAuth && !isRefreshCall && !options.skipRefresh;
+
+		// Proaktif: access token di memori sudah kedaluwarsa → segarkan dulu
+		// agar request tidak perlu menabrak 401 lebih dulu.
+		if (canRefresh && !isCoolingDown() && accessTokenExpired()) {
+			try {
+				await refreshAccessToken();
+			} catch {
+				// Biarkan request tetap berjalan; 401 di bawah akan menangani.
+			}
+		}
+
 		const token = useAuth ? tokenStore.getAccessToken() : null;
 		if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -95,28 +151,19 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 			body: body === undefined ? undefined : JSON.stringify(body)
 		});
 
-		if (res.status === 401 && useAuth && !options.skipRefresh && !path.endsWith('/refresh')) {
-			let errorCode: ErrorCode | null = null;
+		// Access token kedaluwarsa (atau belum ada) → minta token baru SEKALI,
+		// lalu ulangi request yang sama dengan token baru.
+		if (res.status === 401 && canRefresh && !isCoolingDown()) {
 			try {
-				const clone = res.clone();
-				const errBody = (await clone.json()) as ApiErrorEnvelope;
-				errorCode = errBody.errorCode ?? null;
-			} catch {
-				errorCode = null;
-			}
-			if (REFRESHABLE_CODES.includes(errorCode)) {
 				await refreshAccessToken();
-				return request(method, path, body, {
-					...options,
-					skipRefresh: true,
-					auth: true
-				});
+			} catch {
+				// Refresh gagal — sesi sudah dibersihkan; teruskan respons 401
+				// asli supaya halaman bisa menampilkan error yang sesuai.
+				return res;
 			}
-			// Token mati tidak bisa di-refresh lagi → buang sisa token lokal.
-			if (errorCode === 'INVALID_REFRESH_TOKEN' || errorCode === 'UNAUTHORIZED') {
-				tokenStore.clear();
-			}
+			return request(method, path, body, { ...options, skipRefresh: true, auth: true });
 		}
+
 		return res;
 	}
 
@@ -126,6 +173,7 @@ export function createFetchHttpClient(tokenStore: TokenStore): HttpClient {
 	}
 
 	return {
+		refreshAccessToken,
 		async getSingle<T>(path: string, options?: RequestOptions): Promise<T | null> {
 			const res = await request('GET', path, undefined, options);
 			await ensureOk(res);

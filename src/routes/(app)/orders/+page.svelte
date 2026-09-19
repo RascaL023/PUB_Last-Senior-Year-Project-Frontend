@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
@@ -18,6 +19,8 @@
 	import type { MenuResponse } from '$lib/domain/menu';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import LoadingState from '$lib/components/ui/LoadingState.svelte';
+	import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import MenuPicker, {
 		emptyLine,
@@ -201,8 +204,12 @@
 		void loadOrders(target - 1);
 	}
 
+	// Muat sekali saat sesi siap; pencarian memakai tombol/Enter, bukan tap
+	// ketikan (lihat `untrack` di /menus untuk alasan yang sama).
 	$effect(() => {
-		if (canRead) void loadOrders(0);
+		if (session.status === 'ready' && canRead) {
+			untrack(() => void loadOrders(0));
+		}
 	});
 </script>
 
@@ -212,7 +219,9 @@
 
 <section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
-		{#if !canRead}
+		{#if session.status !== 'ready'}
+			<LoadingState label="Menyiapkan pesanan…" />
+		{:else if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 				<Icon name="receipt" class="text-muted mx-auto mb-2 h-8 w-8" />
 				<h2 class="font-display text-ink mb-2 text-xl font-extrabold">Akses Dibatasi</h2>
@@ -314,7 +323,7 @@
 			</div>
 
 			{#if loading && orders.length === 0}
-				<div class="text-muted py-12 text-center">Memuat order...</div>
+				<TableSkeleton rows={6} columns={6} label="Memuat pesanan…" />
 			{:else if orders.length === 0}
 				<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 					<Icon name="receipt" class="text-muted mx-auto mb-2 h-8 w-8" />

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
@@ -13,6 +14,7 @@
 	import type { OrderStatus, OrderTransition } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import MenuPicker, {
 		emptyLine,
@@ -288,8 +290,10 @@
 
 	$effect(() => {
 		if (session.status === 'ready' && canRead) {
-			void loadDinings();
-			void loadTables();
+			untrack(() => {
+				void loadDinings();
+				void loadTables();
+			});
 		}
 	});
 </script>
@@ -327,7 +331,9 @@
 			</div>
 		</div>
 
-		{#if !canRead}
+		{#if session.status !== 'ready'}
+			<LoadingState label="Menyiapkan sesi meja…" />
+		{:else if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 				<Icon name="table" class="text-muted mx-auto mb-2 h-8 w-8" />
 				<h3 class="font-display text-ink mb-2 text-lg font-extrabold">Akses Dibatasi</h3>
@@ -346,7 +352,18 @@
 			{/if}
 
 			{#if loading && dinings.length === 0}
-				<div class="text-muted py-12 text-center">Memuat sesi...</div>
+				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+					{#each Array(4) as _}
+						<div class="bg-shell border-line border-rice rounded-card p-4">
+							<div class="skeleton-shimmer mb-4 h-5 w-40 rounded-full"></div>
+							<div class="space-y-3">
+								<div class="skeleton-shimmer h-4 w-full rounded-full"></div>
+								<div class="skeleton-shimmer h-4 w-2/3 rounded-full"></div>
+							</div>
+						</div>
+					{/each}
+				</div>
+				<p class="text-muted mt-6 text-center text-sm font-bold">Memuat sesi…</p>
 			{:else if dinings.length === 0}
 				<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 					<Icon name="table" class="text-muted mx-auto mb-2 h-8 w-8" />

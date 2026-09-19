@@ -7,6 +7,7 @@
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import AppSidebar from '$lib/components/app/Sidebar.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 
 	let { children } = $props();
 
@@ -63,8 +64,13 @@
 		<p class="text-muted font-bold">Mengarahkan ke halaman masuk...</p>
 	</div>
 {:else}
-	<div class="bg-app text-ink flex h-screen">
-		{@render children()}
+	<!--
+		Status sesi belum diketahui. JANGAN render children di sini: halaman
+		yang sudah terlanjur memeriksa authority (mis. /reports) akan sempat
+		menampilkan "Akses Dibatasi" sebelum sesi selesai dipulihkan.
+	-->
+	<div class="bg-app text-ink">
+		<LoadingState label="Menyiapkan sesi…" full />
 	</div>
 {/if}
 

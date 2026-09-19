@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { session } from '$lib/stores';
 	import { getApi } from '$lib/infrastructure/api/index';
 	import { uploadToImageKit } from '$lib/infrastructure/imagekit/upload';
@@ -11,6 +12,8 @@
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import LoadingState from '$lib/components/ui/LoadingState.svelte';
+	import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
 
 	const api = getApi();
 
@@ -214,10 +217,15 @@
 		void loadMenus(target - 1);
 	}
 
+	// Muat sekali saat sesi siap. `untrack` mencegah filter (yang dibaca di
+	// dalam loader) menjadi dependency — tanpa ini, mengetik di kolom cari
+	// akan memicu request tiap ketikan.
 	$effect(() => {
-		if (canRead) {
-			void loadMenus(0);
-			void loadRefs();
+		if (session.status === 'ready' && canRead) {
+			untrack(() => {
+				void loadMenus(0);
+				void loadRefs();
+			});
 		}
 	});
 </script>
@@ -228,7 +236,9 @@
 
 <section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
-		{#if !canRead}
+		{#if session.status !== 'ready'}
+			<LoadingState label="Menyiapkan menu…" />
+		{:else if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 				<Icon name="coffee" class="text-muted mx-auto mb-2 h-8 w-8" />
 				<h2 class="font-display text-ink mb-2 text-xl font-extrabold">Akses Dibatasi</h2>
@@ -409,8 +419,8 @@
 				</div>
 			{/if}
 
-			{#if loading}
-				<div class="text-muted py-12 text-center">Memuat menu...</div>
+			{#if loading && menus.length === 0}
+				<TableSkeleton rows={6} columns={5} label="Memuat menu…" />
 			{:else if menus.length === 0}
 				<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 					<Icon name="coffee" class="text-muted mx-auto mb-2 h-8 w-8" />
