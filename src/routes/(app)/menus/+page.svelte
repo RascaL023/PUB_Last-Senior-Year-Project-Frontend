@@ -38,6 +38,8 @@
 	let formCategoryIds = $state<number[]>([]);
 	let formModifierIds = $state<number[]>([]);
 	let formImages = $state<string[]>([]);
+	// Path → URL: path dikirim ke BE, URL hanya untuk preview thumbnail form.
+	let formImagePreviews = $state<Record<string, string>>({});
 	let uploading = $state(false);
 	let saving = $state(false);
 
@@ -134,7 +136,8 @@
 			const auth = await api.images.getUploadAuth();
 			if (!auth) throw new Error('Gagal meminta kredensial upload');
 			const uploaded = await uploadToImageKit(auth, file);
-			formImages = [...formImages, uploaded.url];
+			if (uploaded.url) formImagePreviews[uploaded.filePath] = uploaded.url;
+			formImages = [...formImages, uploaded.filePath];
 			toastStore.show('Gambar terunggah.', 'success');
 		} catch (err) {
 			toastStore.show(toAppError(err).message, 'error');
@@ -360,9 +363,12 @@
 					<p class="text-ink mt-3 mb-1 text-xs font-bold">Gambar</p>
 					{#if formImages.length > 0}
 						<div class="mb-2 flex flex-wrap gap-2">
-							{#each formImages as url, i}
+							{#each formImages as path, i}
 								<div class="relative">
-									<img src={url} alt="menu" class="bg-subtle rounded-btn h-16 w-16 object-cover" />
+									<img	src={formImagePreviews[path] ?? path}
+									alt="menu"
+										class="bg-subtle rounded-btn h-16 w-16 object-cover"
+									/>
 									<button
 										type="button"
 										aria-label="Hapus gambar"

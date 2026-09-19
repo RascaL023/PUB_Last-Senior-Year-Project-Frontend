@@ -6,6 +6,9 @@ export async function uploadToImageKit(auth: ImageUploadAuth, file: File): Promi
 	const form = new FormData();
 	form.append('file', file);
 	form.append('fileName', file.name);
+	// Simpan rapi: folder terpusat dari BE, nama file tetap, tanpa suffix acak.
+	form.append('useUniqueFileName', 'false');
+	if (auth.uploadFolder) form.append('folder', auth.uploadFolder);
 	form.append('publicKey', auth.publicKey);
 	form.append('signature', auth.signature);
 	form.append('expire', String(auth.expire));
@@ -15,9 +18,12 @@ export async function uploadToImageKit(auth: ImageUploadAuth, file: File): Promi
 	if (!res.ok) {
 		throw new Error(`Upload gagal (${res.status}): ${await readImageKitError(res)}`);
 	}
-	const json = (await res.json()) as { url?: string; fileId?: string };
-	if (!json.url) throw new Error('Upload gagal: respons tanpa URL');
-	return { url: json.url, fileId: json.fileId };
+	const json = (await res.json()) as { filePath?: string; url?: string; fileId?: string };
+	if (!json.filePath) throw new Error('Upload gagal: respons tanpa filePath');
+	// Yang disimpan ke BE adalah path relatif (mis. /menus/test.png),
+	// bukan URL — BE yang me-resolve ke URL saat menampilkan.
+	// `url` hanya dibawa untuk preview <img> di form.
+	return { filePath: json.filePath, url: json.url, fileId: json.fileId };
 }
 
 /** Ambil pesan asli ImageKit (`message` + `help`) agar tidak hilang jadi generik. */
