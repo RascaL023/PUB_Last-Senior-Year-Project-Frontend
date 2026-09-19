@@ -11,6 +11,7 @@
 	import type { OrderResponse } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	const api = getApi();
 
@@ -104,15 +105,12 @@
 	<title>Lantai — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
-		<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-			<div>
-				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Lantai Restoran</h2>
-				<p class="text-muted mt-1 text-xs font-bold">
-					{openDinings.length} sesi terbuka · {readyOrders.length} pesanan siap diantar
-				</p>
-			</div>
+		<PageHeader
+			title="Lantai Restoran"
+			subtitle={`${openDinings.length} sesi terbuka · ${readyOrders.length} pesanan siap diantar`}
+		>
 			<button
 				type="button"
 				onclick={reload}
@@ -120,7 +118,7 @@
 			>
 				<Icon name="refresh" class="h-3.5 w-3.5" /> Muat ulang
 			</button>
-		</div>
+		</PageHeader>
 
 		{#if error}
 			<div class="mb-4">

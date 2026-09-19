@@ -105,64 +105,65 @@
 {/if}
 
 <style>
+	/*
+	 * Panel tema = dropdown yang di-anchor rapi tepat di bawah trigger:
+	 * sudut kanan panel sejajar dengan sudut kanan trigger, dipisah celah
+	 * 0.5rem. Reveal tetap memakai clip-path (turun dari atas) + scale + fade.
+	 *
+	 * Trik shadow: wrapper memakai `overflow: clip` + border-radius, dan
+	 * clip-path saat terbuka diperluas 2rem (`inset(-2rem ...)`) supaya
+	 * drop-shadow wrapper tidak ikut terpotong oleh clip-nya sendiri.
+	 */
 	.theme-menu {
-		--panel-overlap: 5px;
+		--panel-gap: 0.5rem;
 		--panel-duration: 200ms;
 		--panel-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
-		--trigger-w: 5.75rem;
+		--panel-inset: 2rem;
 	}
 
 	.theme-trigger {
 		background: var(--theme-bg-subtle);
-		position: relative;
-		z-index: 60;
 	}
 
 	.theme-trigger.is-open {
-		background: var(--theme-bg-shell);
-		border-bottom-color: transparent;
-		border-bottom-left-radius: 0;
-		border-bottom-right-radius: 0;
-		box-shadow: none;
-		transform: none;
+		background: var(--theme-bg-card-hover);
+		border-color: var(--theme-accent-primary);
+		color: var(--theme-text-main);
 	}
 
 	.theme-panel-clip {
-		top: calc(100% - var(--panel-overlap));
-		width: min(21rem, calc(100vw - 1rem));
+		top: calc(100% + var(--panel-gap));
+		right: 0;
+		width: min(20rem, calc(100vw - 1.5rem));
+		border-radius: var(--theme-radius-card);
 		overflow: clip;
 		pointer-events: none;
-		clip-path: inset(0 0 100% 0);
-		transform-origin: top;
-		transition: clip-path var(--panel-duration) var(--panel-ease-out);
+		box-shadow: none;
+		clip-path: inset(0 0 100% 0 round var(--theme-radius-card));
+		transition:
+			clip-path var(--panel-duration) var(--panel-ease-out),
+			box-shadow var(--panel-duration) var(--panel-ease-out);
 	}
 
 	.theme-panel-clip.is-open {
 		pointer-events: auto;
-		clip-path: inset(0);
+		box-shadow: var(--theme-shadow-lg);
+		clip-path: inset(
+			calc(-1 * var(--panel-inset)) calc(-1 * var(--panel-inset))
+				calc(-1 * var(--panel-inset)) calc(-1 * var(--panel-inset)) round
+				var(--theme-radius-card)
+		);
 	}
 
 	.theme-panel {
 		position: relative;
-		border-radius: 0 0 var(--theme-radius-card) var(--theme-radius-card);
+		border-radius: inherit;
 		background: var(--theme-bg-shell);
-		box-shadow: 0 18px 34px -18px rgba(0, 0, 0, 0.65);
-		padding: calc(var(--panel-overlap) + 0.5rem) 0.5rem 0.5rem;
-		transform: scaleY(0.98);
+		border: var(--theme-border-w) solid var(--theme-border-color);
+		padding: 0.5rem;
+		transform: scaleY(0.96);
 		transform-origin: top;
 		transition: transform var(--panel-duration) var(--panel-ease-out);
-	}
-
-	.theme-panel::before {
-		content: '';
-		position: absolute;
-		top: calc(-1 * var(--panel-overlap));
-		right: calc(-1 * var(--theme-border-w));
-		width: calc(var(--trigger-w) + 1rem);
-		height: calc(var(--panel-overlap) + var(--theme-border-w));
-		background: var(--theme-bg-shell);
-		border-top-left-radius: var(--theme-radius-btn);
-		pointer-events: none;
 	}
 
 	.theme-panel-clip.is-open .theme-panel {
@@ -210,15 +211,8 @@
 			linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04) 32%),
 			var(--theme-bg-overlay);
 		border-color: rgba(255, 255, 255, 0.22);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.14),
-			0 24px 60px -24px rgba(0, 0, 0, 0.9);
 		backdrop-filter: blur(var(--theme-blur)) saturate(180%);
 		-webkit-backdrop-filter: blur(var(--theme-blur)) saturate(180%);
-	}
-
-	:global([data-theme='glass-cafe']) .theme-panel::before {
-		background: var(--theme-bg-overlay);
 	}
 
 	:global([data-theme='glass-cafe']) .theme-option:not(.is-current) {

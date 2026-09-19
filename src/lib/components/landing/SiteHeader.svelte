@@ -41,7 +41,7 @@
 
 <header class="site-header border-line bg-shell border-rice backdrop-blur-rice sticky top-0 z-50 w-full border-b">
 	<nav class="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6" aria-label="Navigasi utama">
-		<a href="#top" class="mr-auto flex min-w-0 items-center gap-3">
+		<a href="/" class="mr-auto flex min-w-0 items-center gap-3">
 			<span class="bg-accent text-inverted rounded-btn flex h-9 w-9 flex-none items-center justify-center text-base font-extrabold"><Icon name="coffee" class="h-5 w-5" /></span>
 			<span class="min-w-0">
 				<span class="text-ink font-display block truncate text-base leading-tight font-extrabold tracking-tight">Hysteria Cafe</span>
@@ -72,7 +72,7 @@
 						aria-label="Menu akun, {session.user.email}"
 						aria-haspopup="menu"
 						aria-expanded={accountOpen}
-						class="bg-accent text-inverted rounded-full rice-press flex h-9 w-9 items-center justify-center font-bold"
+						class="bg-accent text-inverted rounded-pill rice-press flex h-9 w-9 items-center justify-center font-bold"
 					>
 						<Icon name="user" class="h-5 w-5" />
 					</button>

@@ -8,6 +8,7 @@
 	import { toastStore } from '$lib/stores/toastStore.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	const api = getApi();
 
@@ -192,9 +193,9 @@
 	<title>Katalog — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
-		<h2 class="font-display text-ink mb-4 text-2xl font-extrabold tracking-tight">Katalog</h2>
+		<PageHeader title="Katalog" subtitle="Kategori menu & pilihan tambahan" />
 
 		<div class="mb-4 flex gap-2">
 			<button

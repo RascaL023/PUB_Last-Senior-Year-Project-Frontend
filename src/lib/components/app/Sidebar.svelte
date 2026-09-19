@@ -54,7 +54,7 @@
 						type="button"
 						onclick={() => go(item)}
 						aria-current={active ? 'page' : undefined}
-						class="rounded-btn border-rice rice-press mx-2 mb-0.5 flex w-[calc(100%-1rem)] items-center gap-3 px-3 py-2 text-left font-bold
+						class="nav-link rounded-btn border-rice rice-press mx-2 mb-0.5 flex w-[calc(100%-1rem)] items-center gap-3 px-3 py-2 text-left font-bold
 							{active
 							? 'bg-accent text-inverted border-line shadow-ricesm'
 							: 'text-muted hover:text-ink hover:bg-card-hover border-transparent'}"
@@ -72,7 +72,6 @@
 		</div>
 
 		<div class="border-line border-rice flex flex-col gap-2 p-3">
-			<ThemeSwitcher compact />
 			{#if session.user}
 				<div class="bg-subtle border-line border-rice rounded-btn px-3 py-2">
 					<p class="text-ink truncate font-mono text-xs font-bold">{session.user.email || '—'}</p>
@@ -113,9 +112,7 @@
 >
 	<div class="border-line border-rice p-4">
 		<h1 class="font-display text-ink text-xl font-extrabold">Hysteria Cafe</h1>
-		<p class="text-muted mt-1 font-mono text-xs">
-			{activeItem?.label ?? 'Panel Staf'}
-		</p>
+		<p class="text-muted mt-1 font-mono text-xs">Panel Staf</p>
 	</div>
 	{@render navContent()}
 </nav>

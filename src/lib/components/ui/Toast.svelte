@@ -44,7 +44,7 @@
 				<button
 					type="button"
 					onclick={() => toastStore.dismiss(toast.id)}
-					class="text-inverted/70 hover:text-inverted ml-2 flex-none"
+					class="text-inverted opacity-70 hover:opacity-100 ml-2 flex-none"
 				>
 					<Icon name="close" class="h-4 w-4" />
 				</button>

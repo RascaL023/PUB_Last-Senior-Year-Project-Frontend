@@ -30,7 +30,7 @@
 				class="mt-8 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center"
 			>
 				<a
-					href="#menu"
+					href="/menu"
 					class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-6 py-3 text-center text-sm font-bold"
 				>
 					Lihat Menu
@@ -40,12 +40,6 @@
 					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press rice-ghost px-6 py-3 text-center text-sm font-bold"
 				>
 					Pesan dari Meja / Lacak Takeaway
-				</a>
-				<a
-					href="#about"
-					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press rice-ghost px-6 py-3 text-center text-sm font-bold"
-				>
-					Pelajari Lebih Lanjut
 				</a>
 			</div>
 		</div>

@@ -64,3 +64,60 @@ body {
 	color: var(--theme-text-main);
 	min-height: 100vh;
 }
+
+@layer base {
+	/*
+	 * Browser memberi <button> dan kontrol native cursor `default`, bukan
+	 * `pointer`. Samakan seluruh elemen interaktif agar affordance jelas di
+	 * semua tema. :where() menjaga specificity 0 supaya utility seperti
+	 * `cursor-default`/`cursor-not-allowed` tetap bisa menimpanya.
+	 */
+	:where(button, [role='button'], summary, select, label[for], input[type='checkbox'], input[type='radio']):not(
+			:disabled
+		):not([aria-disabled='true']) {
+		cursor: pointer;
+	}
+
+	:where(button, select, input, textarea)[disabled],
+	:where([aria-disabled='true']) {
+		cursor: not-allowed;
+	}
+
+	/* Cincin fokus keyboard yang konsisten & theme-aware (kontrak §3.2). */
+	:where(a, button, [role='button'], summary, select, input, textarea):focus-visible {
+		outline: 2px solid var(--theme-accent-primary);
+		outline-offset: 2px;
+	}
+
+	/* Kontrol native (checkbox, radio, date, range) mengikuti accent tema. */
+	:where(input, select, textarea, progress) {
+		accent-color: var(--theme-accent-primary);
+	}
+
+	/* Scrollbar mengikuti warna tema, bukan abu-abu bawaan browser. */
+	html {
+		scrollbar-color: var(--theme-border-color) transparent;
+		scrollbar-width: thin;
+	}
+}
+
+@layer components {
+	/*
+	 * Shell aplikasi (grup route (app)). Di desktop shell punya top bar, jadi
+	 * tinggi minimum area konten harus dikurangi tinggi bar tersebut agar
+	 * halaman tidak memunculkan scrollbar sisa. Mobile tetap 100vh.
+	 */
+	.app-shell {
+		--app-topbar: 0px;
+	}
+
+	@media (width >= 64rem) {
+		.app-shell {
+			--app-topbar: 3rem;
+		}
+	}
+
+	.app-main {
+		min-height: calc(100vh - var(--app-topbar, 0px));
+	}
+}

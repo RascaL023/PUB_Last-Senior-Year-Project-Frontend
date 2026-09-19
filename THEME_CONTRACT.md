@@ -365,6 +365,9 @@ Dilarang menumpuk `bg-card` di atas `bg-card` tanpa pembeda (pakai `bg-subtle` a
 - **Input:** `bg-subtle text-ink rounded-btn border-rice border-line`, placeholder memakai `text-muted`/`text-faint`.
 - **Icon-button:** kotak `rounded-btn border-rice border-line shadow-ricesm rice-press`.
 - **Kartu yang bisa diklik/di-hover:** tambahkan `rice-lift` (jangan tulis `hover:` manual untuk transform/shadow).
+- **Header halaman:** selalu pakai komponen `PageHeader` (judul `font-display text-2xl font-extrabold tracking-tight`,
+  subjudul opsional `text-muted text-xs font-bold`, slot aksi rata kanan) — jangan menulis `<h2>` judul halaman manual
+  agar pola tiap halaman seragam. Filter/toolbar tetap di konten, bukan di header.
 - **Modal/overlay:** backdrop `bg-overlay`, panel `bg-card rounded-card shadow-ricelg border-rice border-line`.
 - **Fokus keyboard:** setiap elemen interaktif harus terlihat saat `:focus-visible`
   (outline memakai `accent`, offset 2px).
@@ -398,6 +401,31 @@ bila tidak, pakai `text-ink`.
 - [ ] Tombol memakai `rice-press`, kartu hover memakai `rice-lift`.
 - [ ] Status domain mengikuti §3.3.
 - [ ] `pnpm check` hijau.
+
+### 3.6 Penyesuaian Global & Per-Tema (revisi)
+
+Penyesuaian berikut berlaku untuk **semua** tema (bukan branch markup) dan tidak mengganti token di §1–§2:
+
+- **Base layer** (`src/routes/layout.css`, `@layer base`):
+  - `cursor: pointer` untuk seluruh kontrol interaktif (browser memberi `default` pada `<button>`),
+    `cursor: not-allowed` saat disabled. Dibungkus `:where()` supaya specificity 0 — utility seperti
+    `cursor-default`/`cursor-not-allowed` tetap menang.
+  - `:focus-visible` → `outline: 2px solid var(--theme-accent-primary)` offset `2px`,
+    jadi semua tombol punya indikator fokus tema yang konsisten tanpa menyetel per komponen.
+  - `accent-color` + `scrollbar-color` mengikuti token tema (checkbox/radio/range & scrollbar serasi).
+- **`color-scheme` per tema:** `dark` untuk `kanagawa` & `glass-cafe`, `light` untuk
+  `neurobrutalism` & `dribbble` — agar `<select>`, `<input type="date">`, dan scrollbar native
+  tidak tampil terang di tema gelap.
+- **Hover tombol sekunder/ghost:** `kanagawa` & `glass-cafe` memetakan `--theme-bg-card-hover`
+  sama dengan `--theme-bg-subtle`, sehingga hover nyaris tak terlihat. Ditambahkan tint
+  `color-mix(in srgb, var(--theme-accent-primary) 16%, var(--theme-bg-subtle))` (14% untuk `.rice-ghost`).
+  `dribbble` dikecualikan karena memakai pola invert swap-nya sendiri.
+- **Shell aplikasi `(app)`:** `.app-shell` menetapkan `--app-topbar` (3rem di `≥64rem`) dan setiap
+  halaman memakai `.app-main` = `min-height: calc(100vh - var(--app-topbar, 0px))`, sehingga top bar
+  desktop tidak memunculkan sisa scrollbar. Mobile tetap `100vh`.
+- **Penempatan `ThemeSwitcher`:** desktop → top bar shell `(app)` dan header landing;
+  mobile → top bar `Sidebar`. Panel di-anchor `right: 0` tepat di bawah trigger dengan celah 0.5rem
+  (tanpa patch “penyambung” hardcoded), reveal tetap `clip-path` + `scaleY` + fade.
 
 ---
 

@@ -13,9 +13,9 @@
 		<nav aria-label="Navigasi footer">
 			<h4 class="text-ink mb-3 font-bold">Navigasi</h4>
 			<ul class="space-y-2">
-				<li><a href="#menu" class="footer-link text-muted hover:text-ink text-xs">Menu</a></li>
-				<li><a href="#about" class="footer-link text-muted hover:text-ink text-xs">Tentang</a></li>
-				<li><a href="#order" class="footer-link text-muted hover:text-ink text-xs">Order</a></li>
+				<li><a href="/menu" class="footer-link text-muted hover:text-ink text-xs">Menu</a></li>
+				<li><a href="/#about" class="footer-link text-muted hover:text-ink text-xs">Tentang</a></li>
+				<li><a href="/guest" class="footer-link text-muted hover:text-ink text-xs">Pesan / Lacak</a></li>
 			</ul>
 		</nav>
 

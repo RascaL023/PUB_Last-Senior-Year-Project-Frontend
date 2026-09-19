@@ -14,6 +14,7 @@
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	const api = getApi();
 
@@ -217,9 +218,6 @@
 		void loadMenus(target - 1);
 	}
 
-	// Muat sekali saat sesi siap. `untrack` mencegah filter (yang dibaca di
-	// dalam loader) menjadi dependency — tanpa ini, mengetik di kolom cari
-	// akan memicu request tiap ketikan.
 	$effect(() => {
 		if (session.status === 'ready' && canRead) {
 			untrack(() => {
@@ -234,8 +232,20 @@
 	<title>Kelola Menu — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
+		<PageHeader title="Kelola Menu" subtitle="Menu, harga, dan gambar">
+			{#if canCreate}
+				<button
+					type="button"
+					onclick={openCreate}
+					class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
+				>
+					+ Menu
+				</button>
+			{/if}
+		</PageHeader>
+
 		{#if session.status !== 'ready'}
 			<LoadingState label="Menyiapkan menu…" />
 		{:else if !canRead}
@@ -245,19 +255,6 @@
 				<p class="text-muted text-sm font-bold">Anda tidak memiliki izin mengelola menu.</p>
 			</div>
 		{:else}
-			<div class="mb-4 flex items-center justify-between gap-2">
-				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Kelola Menu</h2>
-				{#if canCreate}
-					<button
-						type="button"
-						onclick={openCreate}
-						class="bg-accent text-inverted rounded-btn border-rice border-line rice-press px-4 py-2 text-sm font-bold"
-					>
-						+ Menu
-					</button>
-				{/if}
-			</div>
-
 			{#if error}
 				<div class="mb-4">
 					<ErrorState

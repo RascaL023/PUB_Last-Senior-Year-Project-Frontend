@@ -10,7 +10,7 @@
 			<a href="/guest" class="bg-card text-ink rounded-btn border-rice border-line rice-press px-6 py-3 text-sm font-bold">
 				Pesan / Lacak Pesanan
 			</a>
-			<a href="#menu" class="border-line text-inverted rounded-btn border-rice rice-press px-6 py-3 text-sm font-bold">
+			<a href="/menu" class="border-line text-inverted rounded-btn border-rice rice-press px-6 py-3 text-sm font-bold">
 				Lihat Menu
 			</a>
 		</div>

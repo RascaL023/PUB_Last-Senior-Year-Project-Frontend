@@ -100,7 +100,7 @@
 	<title>Kelola Meja — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
 		{#if !canRead}
 			<div class="bg-shell border-line border-rice rounded-card p-8 text-center">

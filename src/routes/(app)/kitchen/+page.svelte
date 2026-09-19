@@ -7,6 +7,7 @@
 	import type { KitchenTicket, KitchenListQuery, OrderStatus } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	const api = getApi();
 
@@ -123,11 +124,12 @@
 	<title>Kitchen — Hysteria Cafe</title>
 </svelte:head>
 
-<div class="p-6 bg-app min-h-screen">
-	<div class="flex justify-between items-center mb-6">
-		<h2 class="font-display text-ink text-2xl font-extrabold">Dapur</h2>
-		<span class="text-muted text-xs font-mono">{syncing ? '● Menyinkronisasi...' : 'Siap'}</span>
-	</div>
+<div class="app-main p-6 bg-app">
+	<PageHeader title="Dapur" subtitle="Antrean tiket dapur">
+		<span class="text-muted font-mono text-xs">
+			{syncing ? '● Menyinkronisasi…' : 'Siap'}
+		</span>
+	</PageHeader>
 
 	{#if !canRead}
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">

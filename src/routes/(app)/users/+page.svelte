@@ -225,7 +225,7 @@
 	<title>Pengguna & Peran — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
 		<h2 class="font-display text-ink mb-4 text-2xl font-extrabold tracking-tight">Pengguna & Peran</h2>
 

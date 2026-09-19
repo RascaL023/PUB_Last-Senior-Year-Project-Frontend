@@ -226,7 +226,7 @@
 	<title>Akun Saya — Hysteria Cafe</title>
 </svelte:head>
 
-<div class="p-6 bg-app min-h-screen">
+<div class="app-main p-6 bg-app">
 	<h2 class="font-display text-ink text-2xl font-extrabold mb-6">Akun Saya</h2>
 
 	{#if isStaff}

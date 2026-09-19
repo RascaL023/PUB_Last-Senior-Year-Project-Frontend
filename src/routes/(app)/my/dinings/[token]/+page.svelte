@@ -142,11 +142,11 @@
 </svelte:head>
 
 {#if loading}
-	<div class="bg-app text-ink flex min-h-screen items-center justify-center">
+	<div class="app-main bg-app text-ink flex items-center justify-center">
 		<p class="text-muted text-sm font-bold">Memuat sesi...</p>
 	</div>
 {:else if error || !dining}
-	<div class="bg-app text-ink flex min-h-screen items-center justify-center px-4">
+	<div class="app-main bg-app text-ink flex items-center justify-center px-4">
 		<ErrorState
 			code={forbidden ? 403 : undefined}
 			title={forbidden ? 'Profil Member Dibutuhkan' : 'Sesi Tidak Ditemukan'}
@@ -158,7 +158,7 @@
 		/>
 	</div>
 {:else}
-	<div class="bg-app text-ink min-h-screen pb-20">
+	<div class="app-main bg-app text-ink pb-20">
 		<div class="mx-auto max-w-4xl px-3 py-6 sm:px-6">
 			<p class="text-accent mb-2 font-mono text-xs font-bold tracking-[0.2em] uppercase">— Sesi Saya</p>
 			<div class="flex flex-wrap items-center gap-2">

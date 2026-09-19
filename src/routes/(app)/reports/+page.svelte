@@ -4,9 +4,11 @@
 	import { getApi } from '$lib/infrastructure/api/index';
 	import { formatWibDate } from '$lib/core/time/wib';
 	import type { DashboardSummary, DashboardSummaryQuery } from '$lib/domain/report';
+	import { orderStatusColor, orderStatusLabel } from '$lib/domain/order';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 
 	const api = getApi();
 
@@ -35,9 +37,6 @@
 		}
 	}
 
-	// Muat sekali saat sesi siap. `untrack` mencegah tanggal (yang dibaca di
-	// dalam loader) menjadi dependency sehingga perubahan filter tidak memicu
-	// request ganda (input sudah punya handler `onchange` sendiri).
 	$effect(() => {
 		if (session.status === 'ready' && canRead) {
 			untrack(() => void loadSummary());
@@ -50,6 +49,28 @@
 
 	function formatDate(date: string | null | undefined): string {
 		return formatWibDate(date);
+	}
+
+	const BILLING_LABELS: Record<string, string> = {
+		OPEN: 'Belum lunas',
+		PARTIALLY_PAID: 'Sebagian',
+		PAID: 'Lunas',
+		VOID: 'Void'
+	};
+
+	const BILLING_COLORS: Record<string, string> = {
+		OPEN: 'bg-honey text-ink',
+		PARTIALLY_PAID: 'bg-ember text-inverted',
+		PAID: 'bg-leaf text-inverted',
+		VOID: 'bg-danger text-inverted'
+	};
+
+	function billingLabel(status: string | null): string {
+		return status ? (BILLING_LABELS[status] ?? status) : '—';
+	}
+
+	function billingColor(status: string | null): string {
+		return status ? (BILLING_COLORS[status] ?? 'bg-subtle text-muted') : 'bg-subtle text-muted';
 	}
 
 	function refreshDateRange() {
@@ -70,8 +91,18 @@
 	<title>Dashboard — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
+	<PageHeader title="Dashboard" subtitle="Ringkasan penjualan & operasional">
+		<button
+			type="button"
+			onclick={refreshDateRange}
+			class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
+		>
+			Hari Ini
+		</button>
+	</PageHeader>
+
 	{#if session.status !== 'ready'}
 		<LoadingState label="Menyiapkan dashboard…" />
 	{:else if !canRead}
@@ -81,17 +112,6 @@
 			<p class="text-muted text-sm font-bold">Anda tidak memiliki izin melihat dashboard.</p>
 		</div>
 	{:else}
-	<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-		<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Dashboard</h2>
-		<button
-			type="button"
-			onclick={refreshDateRange}
-			class="bg-accent text-inverted rounded-btn rice-press px-4 py-2 text-sm font-bold"
-		>
-			Hari Ini
-		</button>
-	</div>
-
 	{#if error}
 		<div class="mb-4">
 			<ErrorState title="Gagal Memuat Dashboard" message={error} onRetry={() => loadSummary()} />
@@ -133,10 +153,10 @@
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 			{#each Array(2) as _}
 				<div class="bg-shell border-line border-rice rounded-card p-6">
-					<div class="skeleton-shimmer mb-4 h-5 w-32 rounded-full"></div>
+					<div class="skeleton-shimmer mb-4 h-5 w-32 rounded-pill"></div>
 					<div class="space-y-4">
 						{#each Array(3) as _}
-							<div class="skeleton-shimmer h-4 w-full rounded-full"></div>
+							<div class="skeleton-shimmer h-4 w-full rounded-pill"></div>
 						{/each}
 						<div class="skeleton-shimmer h-8 w-2/3 rounded-btn"></div>
 					</div>
@@ -199,26 +219,36 @@
 			</div>
 		</div>
 
-		<div class="bg-shell border-line border-rice rounded-card p-6 mb-6">
-			<h3 class="font-display text-ink text-lg font-bold mb-4">Menu Terlaris</h3>
+		<div class="bg-shell border-line border-rice rounded-card mb-6 overflow-hidden">
+			<div class="border-line border-rice flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
+				<h3 class="font-display text-ink text-lg font-bold">Menu Terlaris</h3>
+				<span class="text-faint font-mono text-[0.65rem] tracking-[0.18em] uppercase">
+					{summary.topMenus.length} menu
+				</span>
+			</div>
 			{#if summary.topMenus.length === 0}
-				<p class="text-muted text-sm">Tidak ada data</p>
+				<div class="px-6 py-10 text-center">
+					<Icon name="coffee" class="text-muted mx-auto mb-2 h-8 w-8" />
+					<p class="text-muted text-sm font-bold">Belum ada penjualan pada periode ini.</p>
+				</div>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-line border-b border-rice">
-								<th class="text-left py-2 text-muted font-mono font-bold">Menu</th>
-								<th class="text-right py-2 text-muted font-mono font-bold">Qty</th>
-								<th class="text-right py-2 text-muted font-mono font-bold">Pendapatan</th>
+							<tr class="border-line border-rice border-b">
+								<th scope="col" class="text-muted px-6 py-3 text-left font-mono text-xs font-bold tracking-[0.12em] uppercase">#</th>
+								<th scope="col" class="text-muted px-6 py-3 text-left font-mono text-xs font-bold tracking-[0.12em] uppercase">Menu</th>
+								<th scope="col" class="text-muted px-6 py-3 text-right font-mono text-xs font-bold tracking-[0.12em] uppercase">Qty</th>
+								<th scope="col" class="text-muted px-6 py-3 text-right font-mono text-xs font-bold tracking-[0.12em] uppercase">Pendapatan</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each summary.topMenus as menu (menu.menuId)}
-								<tr class="border-line border-b border-rice">
-									<td class="py-2 text-ink">{menu.name ?? '-'}</td>
-									<td class="py-2 text-ink text-right font-mono">{menu.qty}</td>
-									<td class="py-2 text-ink text-right font-mono">{formatPrice(menu.revenue)}</td>
+							{#each summary.topMenus as menu, i (menu.menuId ?? i)}
+								<tr class="border-line border-rice hover:bg-card-hover border-b last:border-b-0">
+									<td class="text-faint px-6 py-3 font-mono text-xs tabular-nums">{i + 1}</td>
+									<td class="text-ink px-6 py-3 font-bold">{menu.name ?? '—'}</td>
+									<td class="text-ink px-6 py-3 text-right font-mono tabular-nums">{menu.qty}</td>
+									<td class="text-ink px-6 py-3 text-right font-mono font-bold tabular-nums">{formatPrice(menu.revenue)}</td>
 								</tr>
 							{/each}
 						</tbody>
@@ -227,25 +257,43 @@
 			{/if}
 		</div>
 
-		<div class="bg-shell border-line border-rice rounded-card p-6">
-			<h3 class="font-display text-ink text-lg font-bold mb-4">Aktivitas Terbaru</h3>
+		<div class="bg-shell border-line border-rice rounded-card overflow-hidden">
+			<div class="border-line border-rice flex flex-wrap items-center justify-between gap-2 border-b px-6 py-4">
+				<h3 class="font-display text-ink text-lg font-bold">Aktivitas Terbaru</h3>
+				<span class="text-faint font-mono text-[0.65rem] tracking-[0.18em] uppercase">
+					{summary.recentActivity.length} entri
+				</span>
+			</div>
 			{#if summary.recentActivity.length === 0}
-				<p class="text-muted text-sm">Tidak ada aktivitas</p>
+				<div class="px-6 py-10 text-center">
+					<Icon name="clock" class="text-muted mx-auto mb-2 h-8 w-8" />
+					<p class="text-muted text-sm font-bold">Belum ada aktivitas pada periode ini.</p>
+				</div>
 			{:else}
-				<div class="space-y-3">
-					{#each summary.recentActivity as activity (activity.orderId)}
-						<div class="border-line border-rice flex items-center justify-between border-b py-2 last:border-b-0">
-							<div>
-								<span class="font-mono text-ink font-bold">{activity.orderNumber ?? '-'}</span>
-								<span class="text-muted text-xs ml-2">{activity.status ?? '-'} / {activity.billingStatus ?? '-'}</span>
-							</div>
-							<div class="text-right">
-								<span class="text-ink font-bold">{formatPrice(activity.orderTotalPrice)}</span>
-								<span class="text-muted text-xs block">{formatDate(activity.createdAt)}</span>
+				{#each summary.recentActivity as activity (activity.orderId)}
+					<div class="border-line border-rice flex flex-wrap items-center justify-between gap-3 border-b px-6 py-3 last:border-b-0">
+						<div class="flex min-w-0 items-center gap-3">
+							<span class="bg-subtle border-line border-rice rounded-pill flex h-9 w-9 flex-none items-center justify-center">
+								<Icon name="receipt" class="text-muted h-4 w-4" />
+							</span>
+							<div class="min-w-0">
+								<p class="text-ink truncate font-mono text-sm font-bold">{activity.orderNumber ?? '—'}</p>
+								<div class="mt-1 flex flex-wrap items-center gap-1.5">
+									<span class="rounded-pill border-rice border-line px-2 py-0.5 font-mono text-[0.65rem] font-bold {orderStatusColor(activity.status ?? '')}">
+										{orderStatusLabel(activity.status ?? '—')}
+									</span>
+									<span class="rounded-pill border-rice border-line px-2 py-0.5 font-mono text-[0.65rem] font-bold {billingColor(activity.billingStatus)}">
+										{billingLabel(activity.billingStatus)}
+									</span>
+								</div>
 							</div>
 						</div>
-					{/each}
-				</div>
+						<div class="text-right">
+							<p class="text-ink font-mono font-bold tabular-nums">{formatPrice(activity.orderTotalPrice)}</p>
+							<p class="text-muted font-mono text-[0.7rem]">{formatDate(activity.createdAt)}</p>
+						</div>
+					</div>
+				{/each}
 			{/if}
 		</div>
 	{/if}

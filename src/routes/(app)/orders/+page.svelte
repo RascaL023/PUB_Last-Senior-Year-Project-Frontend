@@ -21,6 +21,7 @@
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
 	import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import MenuPicker, {
 		emptyLine,
@@ -204,8 +205,6 @@
 		void loadOrders(target - 1);
 	}
 
-	// Muat sekali saat sesi siap; pencarian memakai tombol/Enter, bukan tap
-	// ketikan (lihat `untrack` di /menus untuk alasan yang sama).
 	$effect(() => {
 		if (session.status === 'ready' && canRead) {
 			untrack(() => void loadOrders(0));
@@ -217,8 +216,29 @@
 	<title>Pesanan — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-7xl">
+		<PageHeader title="Daftar Pesanan" subtitle={`${totalItems} pesanan`}>
+			{#if canOpenSession}
+				<button
+					type="button"
+					onclick={() => goto('/dinings')}
+					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+				>
+					<Icon name="table" class="h-3.5 w-3.5" /> Sesi meja (dine-in)
+				</button>
+			{/if}
+			{#if canCreate}
+				<button
+					type="button"
+					onclick={openCreate}
+					class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
+				>
+					{showCreate ? 'Tutup' : '+ Takeaway'}
+				</button>
+			{/if}
+		</PageHeader>
+
 		{#if session.status !== 'ready'}
 			<LoadingState label="Menyiapkan pesanan…" />
 		{:else if !canRead}
@@ -228,33 +248,6 @@
 				<p class="text-muted text-sm font-bold">Anda tidak memiliki izin untuk melihat daftar order.</p>
 			</div>
 		{:else}
-			<div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-				<div>
-					<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Daftar Pesanan</h2>
-					<p class="text-muted mt-1 text-xs font-bold">{totalItems} pesanan</p>
-				</div>
-				<div class="flex flex-wrap gap-2">
-					{#if canOpenSession}
-						<button
-							type="button"
-							onclick={() => goto('/dinings')}
-							class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
-						>
-							<Icon name="table" class="h-3.5 w-3.5" /> Sesi meja (dine-in)
-						</button>
-					{/if}
-					{#if canCreate}
-						<button
-							type="button"
-							onclick={openCreate}
-							class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
-						>
-							{showCreate ? 'Tutup' : '+ Takeaway'}
-						</button>
-					{/if}
-				</div>
-			</div>
-
 			{#if error}
 				<div class="mb-4">
 					<ErrorState

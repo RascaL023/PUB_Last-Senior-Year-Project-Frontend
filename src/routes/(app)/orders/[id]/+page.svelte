@@ -206,7 +206,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
+	<div class="app-main bg-app text-ink flex items-center justify-center">
 		<div class="bg-shell border-line border-rice rounded-card p-8 text-center">
 			<Icon name="receipt" class="h-8 w-8 text-muted mx-auto mb-2" />
 			<h2 class="font-display text-ink text-xl font-extrabold mb-2">Akses Dibatasi</h2>
@@ -214,7 +214,7 @@
 		</div>
 	</div>
 {:else if loading || !order}
-	<div class="bg-app text-ink min-h-screen flex items-center justify-center">
+	<div class="app-main bg-app text-ink flex items-center justify-center">
 		{#if loading}
 			<p class="text-muted text-sm font-bold">Memuat...</p>
 		{:else}
@@ -223,7 +223,7 @@
 		{/if}
 	</div>
 {:else}
-	<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+	<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 		<div class="mx-auto max-w-4xl">
 			<div class="flex items-center justify-between mb-4">
 				<button

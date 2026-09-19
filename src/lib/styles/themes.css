@@ -68,6 +68,8 @@
 	--theme-shadow-sm: 0 4px 12px -2px rgba(0, 0, 0, 0.35);
 	--theme-shadow-lg: 0 16px 40px -6px rgba(0, 0, 0, 0.65);
 	--theme-blur: 0px;
+	/* Tema gelap: kontrol native (select, date picker, scrollbar) ikut gelap. */
+	color-scheme: dark;
 }
 
 [data-theme='glass-cafe'] {
@@ -107,6 +109,7 @@
 	--theme-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
 	--theme-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.3), 0 24px 48px -16px rgba(0, 0, 0, 0.55);
 	--theme-blur: 20px;
+	color-scheme: dark;
 }
 
 [data-theme='neurobrutalism'] {
@@ -146,6 +149,7 @@
 	--theme-shadow-sm: 2.5px 2.5px 0px #26190d;
 	--theme-shadow-lg: 6px 6px 0px #26190d;
 	--theme-blur: 0px;
+	color-scheme: light;
 }
 
 [data-theme='dribbble'] {
@@ -185,6 +189,7 @@
 	--theme-shadow-sm: 0 1px 2px rgba(13, 12, 34, 0.04);
 	--theme-shadow-lg: 0 8px 24px -12px rgba(13, 12, 34, 0.12);
 	--theme-blur: 0px;
+	color-scheme: light;
 }
 
 .rice-press {
@@ -264,6 +269,25 @@
 [data-theme='neurobrutalism'] .rice-press:active {
 	transform: translate(2px, 2px);
 	box-shadow: none;
+}
+
+/*
+ * Isyarat hover tombol sekunder/ghost yang lebih jelas. Kanagawa & glass
+ * memetakan --theme-bg-card-hover sama dengan --theme-bg-subtle, sehingga
+ * tombol sekunder nyaris tak berubah saat di-hover. Di sini latarnya di-tint
+ * accent lewat color-mix — tetap theme-aware, tanpa warna hardcoded.
+ * Dribbble tidak disertakan karena tombolnya memakai pola invert swap sendiri.
+ */
+[data-theme='kanagawa'] .bg-subtle.rice-press:not(.rice-ghost):hover,
+[data-theme='glass-cafe'] .bg-subtle.rice-press:not(.rice-ghost):hover,
+[data-theme='neurobrutalism'] .bg-subtle.rice-press:not(.rice-ghost):hover {
+	background-color: color-mix(in srgb, var(--theme-accent-primary) 16%, var(--theme-bg-subtle));
+}
+
+[data-theme='kanagawa'] .rice-ghost:hover,
+[data-theme='glass-cafe'] .rice-ghost:hover,
+[data-theme='neurobrutalism'] .rice-ghost:hover {
+	background-color: color-mix(in srgb, var(--theme-accent-primary) 14%, transparent);
 }
 
 /* Dribbble: springy capsule pop */

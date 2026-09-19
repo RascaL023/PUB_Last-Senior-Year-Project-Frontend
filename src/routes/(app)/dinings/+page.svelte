@@ -15,6 +15,7 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import ErrorState from '$lib/components/ui/ErrorState.svelte';
 	import LoadingState from '$lib/components/ui/LoadingState.svelte';
+	import PageHeader from '$lib/components/ui/PageHeader.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import MenuPicker, {
 		emptyLine,
@@ -302,34 +303,29 @@
 	<title>Sesi Meja — Hysteria Cafe</title>
 </svelte:head>
 
-<section class="bg-app text-ink min-h-screen px-3 py-6 sm:px-6">
+<section class="app-main bg-app text-ink px-3 py-6 sm:px-6">
 	<div class="mx-auto max-w-6xl">
-		<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-			<div>
-				<h2 class="font-display text-ink text-2xl font-extrabold tracking-tight">Sesi Meja</h2>
-				<p class="text-muted mt-1 text-xs font-bold">
-					{canRead ? `${dinings.length} sesi terbuka` : 'Akses dibatasi'}
-				</p>
-			</div>
-			<div class="flex gap-2">
+		<PageHeader
+			title="Sesi Meja"
+			subtitle={canRead ? `${dinings.length} sesi terbuka` : 'Akses dibatasi'}
+		>
+			<button
+				type="button"
+				onclick={() => loadDinings()}
+				class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+			>
+				<Icon name="refresh" class="h-3.5 w-3.5" /> Muat ulang
+			</button>
+			{#if canCreate && canReadTables}
 				<button
 					type="button"
-					onclick={() => loadDinings()}
-					class="bg-subtle text-muted hover:text-ink rounded-btn border-rice border-line rice-press px-3 py-2 text-xs font-bold"
+					onclick={() => (showOpen = true)}
+					class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
 				>
-					<Icon name="refresh" class="h-3.5 w-3.5" /> Muat ulang
+					+ Buka Meja
 				</button>
-				{#if canCreate && canReadTables}
-					<button
-						type="button"
-						onclick={() => (showOpen = true)}
-						class="bg-accent text-inverted border-line border-rice rounded-btn rice-press px-4 py-2 text-sm font-bold"
-					>
-						+ Buka Meja
-					</button>
-				{/if}
-			</div>
-		</div>
+			{/if}
+		</PageHeader>
 
 		{#if session.status !== 'ready'}
 			<LoadingState label="Menyiapkan sesi meja…" />
@@ -355,10 +351,10 @@
 				<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 					{#each Array(4) as _}
 						<div class="bg-shell border-line border-rice rounded-card p-4">
-							<div class="skeleton-shimmer mb-4 h-5 w-40 rounded-full"></div>
+							<div class="skeleton-shimmer mb-4 h-5 w-40 rounded-pill"></div>
 							<div class="space-y-3">
-								<div class="skeleton-shimmer h-4 w-full rounded-full"></div>
-								<div class="skeleton-shimmer h-4 w-2/3 rounded-full"></div>
+								<div class="skeleton-shimmer h-4 w-full rounded-pill"></div>
+								<div class="skeleton-shimmer h-4 w-2/3 rounded-pill"></div>
 							</div>
 						</div>
 					{/each}

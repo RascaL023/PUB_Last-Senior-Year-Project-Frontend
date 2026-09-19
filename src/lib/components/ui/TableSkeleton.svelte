@@ -22,13 +22,13 @@
 >
 	<div class="border-line border-rice flex items-center gap-4 border-b px-4 py-3">
 		{#each columnList as _}
-			<div class="skeleton-shimmer h-3 w-20 rounded-full"></div>
+			<div class="skeleton-shimmer h-3 w-20 rounded-pill"></div>
 		{/each}
 	</div>
 	{#each rowList as _}
 		<div class="flex items-center gap-4 px-4 py-4">
 			{#each columnList as _}
-				<div class="skeleton-shimmer h-4 w-full rounded-full"></div>
+				<div class="skeleton-shimmer h-4 w-full rounded-pill"></div>
 			{/each}
 		</div>
 	{/each}

@@ -49,3 +49,9 @@ export interface MenuListQuery {
 	size?: number;
 	sort?: string;
 }
+
+export interface TopMenuQuery {
+	days?: number;
+	page?: number;
+	size?: number;
+}

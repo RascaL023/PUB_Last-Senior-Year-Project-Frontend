@@ -37,7 +37,7 @@
 
 	<div class="relative">
 		<span
-			class="bg-subtle border-rice border-line mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+			class="bg-subtle border-rice border-line rounded-pill mx-auto mb-4 flex h-14 w-14 items-center justify-center"
 		>
 			<Icon name={icon} class="text-accent h-7 w-7" />
 		</span>
