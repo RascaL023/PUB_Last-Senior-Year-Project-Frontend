@@ -164,7 +164,7 @@
 				imageUrls: formImages.length > 0 ? formImages : undefined,
 				basePrice: formPrice as number,
 				isAvailable: formAvailable,
-				ModifierTypeIds: formModifierIds.length > 0 ? formModifierIds : undefined
+				modifierTypeIds: formModifierIds.length > 0 ? formModifierIds : undefined
 			};
 			if (editingId !== null) {
 				await api.menus.update(editingId, payload);

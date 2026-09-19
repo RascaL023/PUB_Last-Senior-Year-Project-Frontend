@@ -8,7 +8,7 @@ export interface MenuRequest {
 	imageUrls?: string[];
 	basePrice: number;
 	isAvailable?: boolean;
-	ModifierTypeIds?: number[];
+	modifierTypeIds?: number[];
 }
 
 export type MenuPutRequest = MenuRequest;
